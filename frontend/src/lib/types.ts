@@ -1,4 +1,6 @@
 export type TestFormat = "computer" | "computer_wop";
+export type ProviderCode = "british_council" | "idp";
+export type Examinee = "self" | "other";
 export type SeatStatus = "available" | "few_left" | "full" | "closed";
 export type BookingStatus = "initiated" | "confirmed" | "cancelled";
 export type InquiryStatus = "new" | "contacted" | "closed";
@@ -23,6 +25,8 @@ export interface TestSession {
   id: number;
   date: string;
   weekday: string;
+  provider: ProviderCode;
+  provider_label: string;
   slot: "morning" | "afternoon";
   slot_label: string;
   city: { name: string; slug: string };
@@ -52,8 +56,10 @@ export interface User {
   email: string;
   full_name: string;
   phone: string;
+  date_of_birth: string | null;
   email_verified: boolean;
   is_staff: boolean;
+  date_joined: string;
 }
 
 export interface Booking {
@@ -64,6 +70,15 @@ export interface Booking {
   session: TestSession;
   whatsapp_url: string;
   created_at: string;
+  examinee: Examinee;
+  candidate_name: string;
+  candidate_phone: string;
+  candidate_email: string;
+  date_of_birth: string | null;
+  province: string;
+  district: string;
+  municipality: string;
+  has_passport: boolean;
 }
 
 export interface Inquiry {
@@ -106,6 +121,8 @@ export interface ContentBlock {
 
 export interface SessionFilters {
   city?: string;
+  provider?: string;
+  category?: string;
   test_type?: string;
   test_format?: string;
   month?: string;

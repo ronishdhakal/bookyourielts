@@ -77,6 +77,13 @@ class TestFormat(models.TextChoices):
     COMPUTER_WOP = "computer_wop", "Computer-delivered with Writing on Paper"
 
 
+class Provider(models.TextChoices):
+    """Who runs the test session. Names are used only to describe the session, never as branding."""
+
+    BRITISH_COUNCIL = "british_council", "British Council"
+    IDP = "idp", "IDP"
+
+
 class SessionSlot(models.TextChoices):
     MORNING = "morning", "Morning (about 9:00 am to 12:00 pm)"
     AFTERNOON = "afternoon", "Afternoon (about 1:00 pm to 4:00 pm)"
@@ -99,6 +106,12 @@ class TestSession(models.Model):
     __test__ = False  # not a pytest class
 
     date = models.DateField(db_index=True)
+    provider = models.CharField(
+        max_length=20,
+        choices=Provider.choices,
+        default=Provider.BRITISH_COUNCIL,
+        help_text="The organisation that runs this test session.",
+    )
     slot = models.CharField(max_length=10, choices=SessionSlot.choices, default=SessionSlot.MORNING)
     city = models.ForeignKey(City, on_delete=models.PROTECT, related_name="sessions")
     venue = models.ForeignKey(Venue, on_delete=models.PROTECT, null=True, blank=True, related_name="sessions")

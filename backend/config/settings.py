@@ -126,6 +126,11 @@ CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS", FRONTEND_URL)
 CORS_ALLOW_CREDENTIALS = True
 CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS", FRONTEND_URL)
 
+# One login for the site and users.<domain>: set COOKIE_DOMAIN=.bookyourielts.com in production.
+COOKIE_DOMAIN = env("COOKIE_DOMAIN") or None
+SESSION_COOKIE_DOMAIN = COOKIE_DOMAIN
+CSRF_COOKIE_DOMAIN = COOKIE_DOMAIN
+DATA_UPLOAD_MAX_MEMORY_SIZE = 26 * 1024 * 1024  # two passport files of up to 10 MB plus form fields
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "Lax"
 SESSION_COOKIE_AGE = 60 * 60 * 24 * 30
@@ -172,7 +177,7 @@ REST_FRAMEWORK = {
         "anon": "120/min",
         "user": "240/min",
         "auth": "10/min",
-        "inquiry": "5/hour",
+        "inquiry": env("INQUIRY_RATE", "5/hour"),
         "email": "5/hour",
     },
 }

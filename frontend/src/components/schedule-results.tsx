@@ -29,8 +29,8 @@ export function EmptyDates({
         {hasFilters ? "No dates match these filters yet" : "No dates are open right now"}
       </h2>
       <p className="text-muted mx-auto mt-3 max-w-md">
-        New IELTS dates are released in batches. Tell us what you need and we will message you on
-        WhatsApp as soon as a matching date opens.
+        New IELTS dates are released in batches. Tell us what you need and we will contact you as
+        soon as a matching date opens.
       </p>
       <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
         <Link href={inquireUrl(filters)} className="btn btn-primary">

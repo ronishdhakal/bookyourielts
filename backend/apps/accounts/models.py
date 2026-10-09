@@ -34,6 +34,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     full_name = models.CharField(max_length=120)
     phone = models.CharField(max_length=16, blank=True, help_text="Normalised as +977XXXXXXXXXX")
     email_verified = models.BooleanField(default=False)
+    date_of_birth = models.DateField(null=True, blank=True)
     is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     date_joined = models.DateTimeField(default=timezone.now)

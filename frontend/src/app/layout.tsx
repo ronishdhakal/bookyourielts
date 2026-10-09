@@ -1,8 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque, IBM_Plex_Mono, Instrument_Sans } from "next/font/google";
 import { AuthProvider } from "@/components/auth-provider";
-import { Footer } from "@/components/footer";
-import { Header } from "@/components/header";
 import { JsonLd } from "@/components/json-ld";
 import { getSite } from "@/lib/site";
 import { SITE_NAME, SITE_URL, organizationLd } from "@/lib/seo";
@@ -32,7 +30,7 @@ export const metadata: Metadata = {
     template: `%s | ${SITE_NAME}`,
   },
   description:
-    "IELTS booking in Nepal made simple. See open IELTS test dates in Kathmandu, Pokhara, Chitwan, Butwal and more, check seats and fees, and book on WhatsApp.",
+    "IELTS booking in Nepal made simple. See open IELTS test dates in Kathmandu, Pokhara, Chitwan, Butwal and more, check seats and fees, and book your date online.",
   applicationName: SITE_NAME,
   openGraph: { type: "website", siteName: SITE_NAME, locale: "en_NP" },
   twitter: { card: "summary_large_image" },
@@ -55,16 +53,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         >
           Skip to content
         </a>
-        <AuthProvider>
-          {site.announcement && (
-            <div className="bg-marigold text-ink px-4 py-2 text-center text-[0.9375rem] font-medium">
-              {site.announcement}
-            </div>
-          )}
-          <Header />
-          <main id="main">{children}</main>
-          <Footer />
-        </AuthProvider>
+        <AuthProvider>{children}</AuthProvider>
         <JsonLd data={organizationLd(site.contact_email, site.contact_phone)} />
       </body>
     </html>

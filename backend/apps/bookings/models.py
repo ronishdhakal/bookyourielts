@@ -1,3 +1,6 @@
+import uuid
+from pathlib import Path
+
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
@@ -11,6 +14,16 @@ class BookingStatus(models.TextChoices):
     CANCELLED = "cancelled", "Cancelled"
 
 
+def passport_upload_path(instance, filename: str) -> str:
+    """Random file names so a leaked URL cannot be guessed from a reference."""
+    return f"passports/{uuid.uuid4().hex}{Path(filename).suffix.lower()}"
+
+
+class Examinee(models.TextChoices):
+    SELF = "self", "Myself"
+    OTHER = "other", "Someone else"
+
+
 class BookingRequest(models.Model):
     reference = models.CharField(max_length=20, unique=True, null=True, blank=True, editable=False)
     user = models.ForeignKey(
@@ -21,6 +34,19 @@ class BookingRequest(models.Model):
         max_length=12, choices=BookingStatus.choices, default=BookingStatus.INITIATED, db_index=True
     )
     whatsapp_clicked_at = models.DateTimeField(null=True, blank=True)
+
+    # Candidate details, collected before the booking is handed to the team.
+    examinee = models.CharField(max_length=10, choices=Examinee.choices, default=Examinee.SELF)
+    candidate_name = models.CharField(max_length=120, blank=True)
+    candidate_phone = models.CharField(max_length=16, blank=True)
+    candidate_email = models.EmailField(blank=True)
+    date_of_birth = models.DateField(null=True, blank=True)
+    province = models.CharField(max_length=40, blank=True)
+    district = models.CharField(max_length=40, blank=True)
+    municipality = models.CharField(max_length=80, blank=True, verbose_name="city / municipality")
+    passport_front = models.FileField(upload_to=passport_upload_path, blank=True)
+    passport_back = models.FileField(upload_to=passport_upload_path, blank=True)
+
     admin_notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

@@ -54,6 +54,7 @@ def test_bulk_create(admin_client, ktm):
     url = "/admin/catalog/testsession/bulk-create/"
     assert admin_client.get(url).status_code == 200
     data = {
+        "provider": "british_council",
         "cities": [ktm.pk, City.objects.get(slug="pokhara").pk],
         "test_types": [
             TestType.objects.get(code="academic").pk,
@@ -85,7 +86,9 @@ def test_confirm_via_admin_action_and_edit_form(admin_client, make_session, user
     s.refresh_from_db()
     assert s.seats_booked == 1
     change = reverse("admin:bookings_bookingrequest_change", args=[b.pk])
-    admin_client.post(change, {"status": BookingStatus.CANCELLED, "admin_notes": "refunded"})
+    admin_client.post(
+        change, {"status": BookingStatus.CANCELLED, "admin_notes": "refunded", "examinee": "self"}
+    )
     s.refresh_from_db()
     b.refresh_from_db()
     assert s.seats_booked == 0 and b.status == BookingStatus.CANCELLED and b.admin_notes == "refunded"

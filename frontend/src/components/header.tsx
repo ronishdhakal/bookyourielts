@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "./auth-provider";
+import { appHref } from "@/lib/portal";
 import { Logo } from "./logo";
 
 const NAV = [
@@ -31,7 +32,10 @@ export function Header() {
     <span className="inline-block h-10 w-28" aria-hidden />
   ) : user ? (
     <>
-      <Link href="/dashboard" className="font-semibold underline-offset-4 hover:underline">
+      <Link
+        href={appHref("/bookings")}
+        className="font-semibold underline-offset-4 hover:underline"
+      >
         My bookings
       </Link>
       <button

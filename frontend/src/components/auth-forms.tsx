@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { ApiError, authApi } from "@/lib/api";
+import { goNext } from "@/lib/nav";
 import { validateEmail, validatePassword, validatePhone } from "@/lib/validate";
 import { useAuth } from "./auth-provider";
 import { FormError, TextField } from "./text-field";
@@ -40,8 +41,7 @@ export function LoginForm({ next }: { next: string }) {
     try {
       const user = await authApi.login(email.trim(), password);
       setUser(user);
-      router.push(next);
-      router.refresh();
+      goNext(next, router.push, router.refresh);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not log in. Please try again.");
       setBusy(false);
@@ -124,8 +124,7 @@ export function RegisterForm({ next }: { next: string }) {
         email: v.email.trim(),
       });
       setUser(user);
-      router.push(next);
-      router.refresh();
+      goNext(next, router.push, router.refresh);
     } catch (err) {
       setErrs(fieldErrors(err));
       setError(
@@ -150,7 +149,7 @@ export function RegisterForm({ next }: { next: string }) {
         required
       />
       <TextField
-        label="Mobile / WhatsApp number"
+        label="Mobile number"
         type="tel"
         autoComplete="tel"
         inputMode="tel"

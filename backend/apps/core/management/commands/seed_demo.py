@@ -13,7 +13,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.accounts.models import User
-from apps.catalog.models import City, SessionSlot, TestFormat, TestSession, TestType, Venue
+from apps.catalog.models import City, Provider, SessionSlot, TestFormat, TestSession, TestType, Venue
 
 FEES = {
     "academic": 28000,
@@ -71,6 +71,9 @@ class Command(BaseCommand):
                     booked = rng.choice([0, 0, 3, total - 3, total])
                     _, was_created = TestSession.objects.get_or_create(
                         date=day,
+                        provider=Provider.IDP
+                        if (city.slug in BIG_CITIES and code == "general-training")
+                        else Provider.BRITISH_COUNCIL,
                         slot=slot,
                         city=city,
                         test_type=types[code],

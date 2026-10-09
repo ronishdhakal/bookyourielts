@@ -12,11 +12,11 @@ export function AuthShell({
       <div className="hidden lg:block">
         <p className="eyebrow">bookyourielts.com</p>
         <p className="font-display mt-3 max-w-md text-5xl leading-[1.05] font-extrabold">
-          Your IELTS date is one conversation away.
+          Your IELTS date is a few steps away.
         </p>
         <p className="text-muted mt-5 max-w-sm text-lg">
-          A free account lets us link your booking requests to you, so you can come back and resend
-          your WhatsApp message any time.
+          A free account lets us link your booking requests to you, so you can come back and follow
+          every booking in one place.
         </p>
       </div>
       <div>

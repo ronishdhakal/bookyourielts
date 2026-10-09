@@ -1,5 +1,5 @@
 /** Browser-side API client. Calls go to /api/... on our own origin (proxied to Django). */
-import type { Booking, Inquiry, TestSession, User } from "./types";
+import type { Booking, City, Inquiry, Page, SiteInfo, TestSession, TestType, User } from "./types";
 
 export class ApiError extends Error {
   status: number;
@@ -47,12 +47,13 @@ function normaliseErrors(body: unknown, status: number): ApiError {
 
 export async function api<T>(
   path: string,
-  options: { method?: string; body?: unknown; signal?: AbortSignal } = {},
+  options: { method?: string; body?: unknown; form?: FormData; signal?: AbortSignal } = {},
 ): Promise<T> {
   const method = options.method ?? "GET";
   const headers: Record<string, string> = { Accept: "application/json" };
   if (method !== "GET") {
-    headers["Content-Type"] = "application/json";
+    // For FormData the browser sets the multipart boundary itself.
+    if (!options.form) headers["Content-Type"] = "application/json";
     headers["X-CSRFToken"] = await ensureCsrf();
   }
   let res: Response;
@@ -61,7 +62,7 @@ export async function api<T>(
       method,
       headers,
       credentials: "same-origin",
-      body: options.body === undefined ? undefined : JSON.stringify(options.body),
+      body: options.form ?? (options.body === undefined ? undefined : JSON.stringify(options.body)),
       signal: options.signal,
     });
   } catch {
@@ -86,6 +87,8 @@ export const authApi = {
   register: (body: { email: string; password: string; full_name: string; phone: string }) =>
     api<User>("/auth/register/", { method: "POST", body }),
   logout: () => api<void>("/auth/logout/", { method: "POST" }),
+  updateMe: (body: Partial<Pick<User, "full_name" | "phone" | "date_of_birth">>) =>
+    api<User>("/auth/me/", { method: "PATCH", body }),
   verifyEmail: (token: string) =>
     api<{ detail: string }>("/auth/verify-email/", { method: "POST", body: { token } }),
   resendVerification: () =>
@@ -98,8 +101,10 @@ export const authApi = {
 
 export const bookingApi = {
   session: (id: number | string) => api<TestSession>(`/sessions/${id}/`),
-  create: (session: number) => api<Booking>("/bookings/", { method: "POST", body: { session } }),
+  create: (form: FormData) => api<Booking>("/bookings/", { method: "POST", form }),
   mine: () => api<Booking[]>("/bookings/"),
+  get: (id: number | string) => api<Booking>(`/bookings/${id}/`),
+  cancel: (id: number) => api<Booking>(`/bookings/${id}/cancel/`, { method: "POST" }),
   resend: (id: number) => api<Booking>(`/bookings/${id}/whatsapp/`, { method: "POST" }),
 };
 
@@ -117,4 +122,17 @@ export interface InquiryInput {
 export const inquiryApi = {
   create: (body: InquiryInput) => api<Inquiry>("/inquiries/", { method: "POST", body }),
   mine: () => api<Inquiry[]>("/inquiries/mine/"),
+};
+
+export const catalogApi = {
+  cities: () => api<City[]>("/cities/"),
+  testTypes: () => api<TestType[]>("/test-types/"),
+  regions: () => api<{ provinces: Record<string, string[]> }>("/regions/"),
+  site: () => api<SiteInfo>("/site/"),
+  content: () => api<{ key: string; title: string; body: string }[]>("/content/"),
+  sessions: (params: Record<string, string | undefined>, signal?: AbortSignal) => {
+    const sp = new URLSearchParams();
+    for (const [k, v] of Object.entries(params)) if (v) sp.set(k, v);
+    return api<Page<TestSession>>(`/sessions/?${sp.toString()}`, { signal });
+  },
 };

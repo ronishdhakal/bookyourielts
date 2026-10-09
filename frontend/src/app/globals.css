@@ -257,3 +257,71 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* ---- Student portal ---- */
+@layer components {
+  .panel {
+    background: var(--color-white-ish);
+    border: 1px solid var(--color-mist);
+    border-radius: 0.75rem;
+  }
+  .panel-pad {
+    padding: 1.25rem;
+  }
+  @media (min-width: 48rem) {
+    .panel-pad {
+      padding: 1.75rem;
+    }
+  }
+  .section-title {
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    letter-spacing: 0.04em;
+    color: var(--color-muted);
+  }
+  .choice {
+    display: block;
+    cursor: pointer;
+    border: 1.5px solid #8a9a95;
+    border-radius: 0.5rem;
+    background: var(--color-white-ish);
+    padding: 1rem 1.125rem;
+    transition:
+      border-color 0.15s,
+      background-color 0.15s,
+      box-shadow 0.15s;
+  }
+  .choice:hover {
+    border-color: var(--color-ink);
+  }
+  .choice[data-selected="true"] {
+    border-color: var(--color-crimson);
+    box-shadow: inset 0 0 0 1.5px var(--color-crimson);
+    background: #fff;
+  }
+  .choice[aria-disabled="true"] {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+  /* Booking summary shaped like a ticket stub: notches at the tear line. */
+  .ticket {
+    position: relative;
+    background: var(--color-spruce);
+    color: var(--color-board);
+    border-radius: 0.75rem;
+    --notch: 0.7rem;
+    -webkit-mask:
+      radial-gradient(circle var(--notch) at 0 var(--tear, 62%), transparent 98%, #000) left / 51%
+        100% no-repeat,
+      radial-gradient(circle var(--notch) at 100% var(--tear, 62%), transparent 98%, #000) right /
+        51% 100% no-repeat;
+    mask:
+      radial-gradient(circle var(--notch) at 0 var(--tear, 62%), transparent 98%, #000) left / 51%
+        100% no-repeat,
+      radial-gradient(circle var(--notch) at 100% var(--tear, 62%), transparent 98%, #000) right /
+        51% 100% no-repeat;
+  }
+  .ticket-tear {
+    border-top: 2px dashed rgb(232 240 236 / 0.35);
+  }
+}

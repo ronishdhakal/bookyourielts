@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { appHref } from "@/lib/portal";
 import { getSite } from "@/lib/site";
 import { Logo } from "./logo";
 
@@ -8,9 +9,9 @@ export async function Footer() {
     <footer className="on-dark bg-spruce text-board mt-24">
       <div className="container-page grid gap-10 py-14 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
         <div>
-          <Logo light />
+          <Logo onDark />
           <p className="text-board/80 mt-4 max-w-xs text-[0.9375rem]">
-            We help students in Nepal find IELTS dates and finish their booking on WhatsApp.
+            We help students in Nepal find IELTS dates and finish their booking.
           </p>
         </div>
         <FooterCol
@@ -19,7 +20,7 @@ export async function Footer() {
             ["/ielts-test-dates", "IELTS test dates"],
             ["/ielts-booking-nepal", "IELTS booking in Nepal"],
             ["/inquire", "Send an inquiry"],
-            ["/dashboard", "My bookings"],
+            [appHref("/bookings"), "My bookings"],
           ]}
         />
         <FooterCol

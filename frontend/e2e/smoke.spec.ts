@@ -1,10 +1,30 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 const PASSWORD = "Str0ng-pass-123";
 
 function uniqueUser() {
   const id = `${Date.now()}${Math.floor(Math.random() * 1000)}`;
   return { name: "Test Student", email: `e2e-${id}@example.com`, phone: "9812345678" };
+}
+
+async function fillRegistration(page: Page, u: ReturnType<typeof uniqueUser>) {
+  await page.waitForLoadState("networkidle"); // let React hydrate before typing
+  await page.getByLabel(/Full name/).fill(u.name);
+  await page.getByLabel(/Mobile/).fill(u.phone);
+  await page.getByLabel("Email *").fill(u.email);
+  await page.getByLabel(/^Password/).fill(PASSWORD);
+  await page.getByRole("button", { name: "Create account" }).click();
+}
+
+async function fillDetails(
+  page: Page,
+  place: { province: string; district: string; city: string },
+) {
+  await page.getByLabel(/City \/ municipality/).fill(place.city);
+  await page.getByLabel(/Province/).selectOption(place.province);
+  await page.getByLabel(/District/).selectOption(place.district);
+  await page.getByLabel(/Date of birth/).fill("2001-04-05");
+  await page.getByLabel(/I confirm these details/).check();
 }
 
 test.beforeEach(async ({ context }) => {
@@ -14,37 +34,50 @@ test.beforeEach(async ({ context }) => {
   );
 });
 
-test("home page shows the hero, the departure board and the disclaimer", async ({ page }) => {
+test("home page leads with the booking, not with WhatsApp", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { level: 1 })).toContainText("IELTS booking in Nepal");
+  await expect(page.getByRole("heading", { level: 1 })).not.toContainText(/whatsapp/i);
   await expect(page.getByRole("heading", { name: "Next open dates" })).toBeVisible();
   await expect(page.getByText("independent service").first()).toBeVisible();
+  await expect(page.getByRole("link", { name: /^Book this date/ }).first()).toBeVisible();
+  await expect(page.locator("section").first()).not.toContainText(/whatsapp/i);
 });
 
-test("student registers, filters dates and books via WhatsApp", async ({ page }) => {
+test("filter dates, log in, and book with WhatsApp only at the last step", async ({ page }) => {
   await page.goto("/ielts-test-dates");
   const toggle = page.getByRole("button", { name: /^Filters/ });
   if (await toggle.isVisible()) await toggle.click(); // filters are collapsed on phones
   await page.getByLabel("City").selectOption("pokhara");
   await expect(page).toHaveURL(/city=pokhara/);
   await expect(page.getByText(/\d+ dates?/).first()).toBeVisible();
+  await expect(page.locator("main")).not.toContainText(/whatsapp/i);
 
-  // Anonymous students are sent to log in, then returned to the same date.
-  const book = page.getByRole("link", { name: /^Book via WhatsApp/ }).first();
-  await book.click();
-  await expect(page).toHaveURL(/\/login\?next=(%2F|\/)book(%2F|\/)\d+/);
+  // Anonymous students are sent to log in, then returned to the same date inside the portal.
+  await page
+    .getByRole("link", { name: /^Book this date/ })
+    .first()
+    .click();
+  await expect(page).toHaveURL(/\/login\?next=/);
   await page.getByRole("link", { name: "Create a free account" }).click();
   const u = uniqueUser();
-  await page.getByLabel(/Full name/).fill(u.name);
-  await page.getByLabel(/Mobile/).fill(u.phone);
-  await page.getByLabel("Email *").fill(u.email);
-  await page.getByLabel(/^Password/).fill(PASSWORD);
-  await page.getByRole("button", { name: "Create account" }).click();
-  await expect(page).toHaveURL(/\/book\/\d+/);
-  await expect(page.getByText("Pokhara").first()).toBeVisible();
+  await fillRegistration(page, u);
 
+  // The chosen date skips straight to the candidate details.
+  await expect(page).toHaveURL(/\/portal\/book\?session=\d+/);
+  await expect(page.getByRole("heading", { name: "Candidate details" })).toBeVisible();
+  await expect(page.locator("main")).not.toContainText(/whatsapp/i);
+  await expect(page.getByLabel("Full name *")).toHaveValue(u.name);
+
+  await fillDetails(page, { province: "Gandaki", district: "Kaski", city: "Lakeside" });
+  await page.getByRole("button", { name: "Continue" }).click();
+
+  // Only now does the flow mention WhatsApp.
+  await expect(page.getByRole("heading", { name: "Review and confirm" })).toBeVisible();
+  await expect(page.getByText(/WhatsApp/).first()).toBeVisible();
+  await page.getByLabel(/I agree to the/).check();
   const popupPromise = page.context().waitForEvent("page");
-  await page.getByRole("button", { name: "Book via WhatsApp" }).click();
+  await page.getByRole("button", { name: "Confirm and continue on WhatsApp" }).click();
   const popup = await popupPromise;
   await popup.waitForURL(/wa\.me/);
   const text = new URL(popup.url()).searchParams.get("text") ?? "";
@@ -53,9 +86,58 @@ test("student registers, filters dates and books via WhatsApp", async ({ page })
   expect(text).toMatch(/Reference: BYI-\d{4}-\d{6}/);
 
   await expect(page.getByText(/Booking request BYI-/)).toBeVisible();
-  await page.getByRole("link", { name: "Go to my bookings" }).click();
-  await expect(page.getByText(/BYI-\d{4}-\d{6}/).first()).toBeVisible();
-  await expect(page.getByText("Initiated")).toBeVisible();
+  await page.getByRole("link", { name: "View this request" }).click();
+  await expect(page.getByText("Awaiting confirmation").first()).toBeVisible();
+  await expect(page.getByText("Lakeside, Kaski, Gandaki")).toBeVisible();
+});
+
+test("the stepper walks through provider, preferences, date, details and review", async ({
+  page,
+}) => {
+  await page.goto("/register?next=%2Fportal%2Fbook");
+  await fillRegistration(page, uniqueUser());
+
+  await expect(page.getByRole("heading", { name: "Choose your exam provider" })).toBeVisible();
+  await expect(page.locator("main")).not.toContainText(/whatsapp/i);
+  await expect(page.getByRole("button", { name: "Continue" })).toBeDisabled();
+  await page.getByText("British Council IELTS").click();
+  await page.getByRole("button", { name: "Continue" }).click();
+
+  await expect(page.getByRole("heading", { name: "Exam preferences" })).toBeVisible();
+  await page.getByLabel("Test type").selectOption("academic");
+  await page.getByLabel("Format").selectOption("computer");
+  await page.getByRole("radio", { name: /Kathmandu/ }).check({ force: true });
+  await page.getByRole("button", { name: "Continue" }).click();
+
+  await expect(page.getByRole("heading", { name: "Pick your test date" })).toBeVisible();
+  await page.locator('[role="grid"] button:not([disabled])').first().click();
+  await page.getByRole("radio").first().check({ force: true });
+  await page.getByRole("button", { name: "Continue" }).click();
+
+  await expect(page.getByRole("heading", { name: "Candidate details" })).toBeVisible();
+  // Required fields are validated with specific messages.
+  await page.getByLabel(/Date of birth/).fill("");
+  await page.getByRole("button", { name: "Continue" }).click();
+  await expect(page.getByText("Enter the date of birth.")).toBeVisible();
+  await expect(page.getByText("Choose a province.")).toBeVisible();
+  await expect(page.getByText("Please confirm that the details match the passport.")).toBeVisible();
+
+  await fillDetails(page, { province: "Bagmati", district: "Kathmandu", city: "Thamel" });
+  await page
+    .locator('input[type="file"]')
+    .first()
+    .setInputFiles({
+      name: "front.png",
+      mimeType: "image/png",
+      buffer: Buffer.from("89504e470d0a1a0a00", "hex"),
+    });
+  await expect(page.getByText("front.png")).toBeVisible();
+  await page.getByRole("button", { name: "Continue" }).click();
+
+  await expect(page.getByRole("heading", { name: "Review and confirm" })).toBeVisible();
+  await expect(page.getByText("Front attached")).toBeVisible();
+  await page.getByRole("button", { name: "Edit" }).first().click();
+  await expect(page.getByRole("heading", { name: "Exam preferences" })).toBeVisible();
 });
 
 test("no matching dates shows an empty state that leads to an inquiry", async ({ page }) => {
@@ -68,7 +150,7 @@ test("no matching dates shows an empty state that leads to an inquiry", async ({
   await expect(page.getByLabel("Preferred city")).toHaveValue("nepalgunj");
 
   await page.getByLabel(/Your name/).fill("Guest Student");
-  await page.getByLabel(/Phone/).fill("+977 9801234567");
+  await page.getByLabel(/Mobile number/).fill("+977 9801234567");
   await page.getByRole("button", { name: "Send inquiry" }).click();
   const wa = page.getByRole("link", { name: "Continue on WhatsApp" });
   await expect(wa).toBeVisible();
@@ -81,7 +163,7 @@ test("no matching dates shows an empty state that leads to an inquiry", async ({
 test("inquiry form explains phone mistakes", async ({ page }) => {
   await page.goto("/inquire");
   await page.getByLabel(/Your name/).fill("A Student");
-  await page.getByLabel(/Phone/).fill("12345");
+  await page.getByLabel(/Mobile number/).fill("12345");
   await page.getByRole("button", { name: "Send inquiry" }).click();
   await expect(page.getByText(/Enter a Nepali mobile number/)).toBeVisible();
 });
@@ -98,13 +180,33 @@ test("city page has its own heading and metadata", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "We could not find that page" })).toBeVisible();
 });
 
-test("dashboard sends logged-out visitors to log in", async ({ page }) => {
-  await page.goto("/dashboard");
-  await expect(page).toHaveURL(/\/login\?next=(%2F|\/)dashboard/);
+test("the portal sends logged-out visitors to log in", async ({ page }) => {
+  await page.goto("/portal/bookings");
+  await expect(page).toHaveURL(/\/login\?next=/);
 });
 
 test("registration shows field errors", async ({ page }) => {
   await page.goto("/register");
   await page.getByRole("button", { name: "Create account" }).click();
   await expect(page.getByText("Use at least 8 characters.")).toBeVisible();
+});
+
+test("a student can withdraw an unconfirmed request", async ({ page }) => {
+  await page.goto("/ielts-test-dates?city=kathmandu");
+  await page
+    .getByRole("link", { name: /^Book this date/ })
+    .first()
+    .click();
+  await page.getByRole("link", { name: "Create a free account" }).click();
+  await fillRegistration(page, uniqueUser());
+  await fillDetails(page, { province: "Bagmati", district: "Kathmandu", city: "Thamel" });
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByLabel(/I agree to the/).check();
+  const popup = page.context().waitForEvent("page");
+  await page.getByRole("button", { name: "Confirm and continue on WhatsApp" }).click();
+  await (await popup).close();
+  await page.getByRole("link", { name: "View this request" }).click();
+  await page.getByRole("button", { name: "Withdraw request" }).click();
+  await page.getByRole("button", { name: "Yes, withdraw" }).click();
+  await expect(page.getByText("Cancelled").first()).toBeVisible();
 });

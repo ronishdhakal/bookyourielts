@@ -8,7 +8,7 @@ from rest_framework.permissions import AllowAny
 
 from apps.core.models import SiteSettings
 
-from .models import City, TestFormat, TestSession, TestType
+from .models import City, Provider, TestFormat, TestSession, TestType
 
 
 def _visible_upcoming():
@@ -31,6 +31,7 @@ class TestTypeSerializer(serializers.ModelSerializer):
 
 class SessionSerializer(serializers.ModelSerializer):
     weekday = serializers.SerializerMethodField()
+    provider_label = serializers.CharField(source="get_provider_display", read_only=True)
     slot_label = serializers.CharField(source="get_slot_display", read_only=True)
     format_label = serializers.CharField(source="get_format_display", read_only=True)
     city = serializers.SerializerMethodField()
@@ -47,6 +48,8 @@ class SessionSerializer(serializers.ModelSerializer):
             "id",
             "date",
             "weekday",
+            "provider",
+            "provider_label",
             "slot",
             "slot_label",
             "city",
@@ -94,6 +97,10 @@ class SessionSerializer(serializers.ModelSerializer):
 
 class SessionFilter(django_filters.FilterSet):
     city = django_filters.CharFilter(field_name="city__slug")
+    provider = django_filters.ChoiceFilter(choices=Provider.choices)
+    category = django_filters.ChoiceFilter(
+        choices=[("regular", "Regular"), ("ukvi", "UKVI")], method="filter_category"
+    )
     test_type = django_filters.CharFilter(field_name="test_type__code")
     # Not called "format": DRF reserves ?format= for content negotiation.
     test_format = django_filters.ChoiceFilter(field_name="format", choices=TestFormat.choices)
@@ -102,7 +109,10 @@ class SessionFilter(django_filters.FilterSet):
 
     class Meta:
         model = TestSession
-        fields = ["city", "test_type", "test_format", "month", "hide_closed"]
+        fields = ["city", "provider", "category", "test_type", "test_format", "month", "hide_closed"]
+
+    def filter_category(self, qs, name, value):
+        return qs.filter(test_type__is_ukvi=(value == "ukvi"))
 
     def filter_month(self, qs, name, value):
         m = re.fullmatch(r"(\d{4})-(0[1-9]|1[0-2])", value or "")

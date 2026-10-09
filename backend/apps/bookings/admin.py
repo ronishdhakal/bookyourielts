@@ -1,5 +1,8 @@
 from django.contrib import admin, messages
-from django.utils.html import format_html
+from django.http import FileResponse, Http404
+from django.shortcuts import get_object_or_404
+from django.urls import path, reverse
+from django.utils.html import format_html, format_html_join
 from unfold.admin import ModelAdmin
 from unfold.decorators import display
 
@@ -34,19 +37,75 @@ class BookingRequestAdmin(ModelAdmin):
     date_hierarchy = "created_at"
     actions = ["mark_confirmed", "mark_cancelled", "export_selected"]
     list_per_page = 50
-    readonly_fields = ["reference", "whatsapp_clicked_at", "created_at", "updated_at", "student_phone"]
-    fields = [
+    readonly_fields = [
         "reference",
-        "user",
-        "student_phone",
-        "session",
-        "status",
-        "admin_notes",
         "whatsapp_clicked_at",
         "created_at",
         "updated_at",
+        "student_phone",
+        "passport_links",
     ]
+    fieldsets = (
+        (None, {"fields": ("reference", "user", "student_phone", "session", "status", "admin_notes")}),
+        (
+            "Candidate",
+            {
+                "fields": (
+                    "examinee",
+                    "candidate_name",
+                    "candidate_phone",
+                    "candidate_email",
+                    "date_of_birth",
+                    "province",
+                    "district",
+                    "municipality",
+                    "passport_links",
+                )
+            },
+        ),
+        ("History", {"fields": ("whatsapp_clicked_at", "created_at", "updated_at")}),
+    )
     autocomplete_fields = ["user"]
+
+    def get_urls(self):
+        custom = [
+            path(
+                "<int:pk>/passport/<str:side>/",
+                self.admin_site.admin_view(self.passport_view),
+                name="bookings_bookingrequest_passport",
+            )
+        ]
+        return custom + super().get_urls()
+
+    def passport_view(self, request, pk: int, side: str):
+        """Passports are private: only staff who may view bookings can open them, never a public URL."""
+        booking = get_object_or_404(BookingRequest, pk=pk)
+        if not self.has_view_permission(request, booking) or side not in ("front", "back"):
+            raise Http404
+        f = booking.passport_front if side == "front" else booking.passport_back
+        if not f:
+            raise Http404
+        response = FileResponse(f.open("rb"))
+        response["Cache-Control"] = "private, no-store"
+        return response
+
+    @display(description="Passport")
+    def passport_links(self, obj):
+        if not obj.pk or not obj.passport_front:
+            return "Not uploaded"
+        links = [
+            format_html(
+                '<a href="{}" target="_blank" rel="noopener">{}</a>',
+                reverse("admin:bookings_bookingrequest_passport", args=[obj.pk, side]),
+                label,
+            )
+            for side, label, f in (
+                ("front", "Front", obj.passport_front),
+                ("back", "Back", obj.passport_back),
+            )
+            if f
+        ]
+        return format_html_join(" · ", "{}", ((link,) for link in links))
 
     def get_readonly_fields(self, request, obj=None):
         base = list(super().get_readonly_fields(request, obj))

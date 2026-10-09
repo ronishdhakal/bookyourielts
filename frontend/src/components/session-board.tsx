@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { appHref } from "@/lib/portal";
 import { FORMAT_SHORT, SLOT_TIMES, formatDate, formatNpr } from "@/lib/format";
 import type { TestSession } from "@/lib/types";
 import { SeatChip } from "./seat-chip";
@@ -26,11 +27,11 @@ function Action({
   if (s.is_bookable) {
     return (
       <Link
-        href={`/book/${s.id}`}
+        href={appHref(`/book?session=${s.id}`)}
         className={`btn btn-primary ${size} ${nowrap}`}
-        aria-label={`Book via WhatsApp: ${s.test_type.name}, ${s.city.name}, ${formatDate(s.date)}`}
+        aria-label={`Book this date: ${s.test_type.name}, ${s.city.name}, ${formatDate(s.date)}`}
       >
-        Book via WhatsApp
+        Book this date
       </Link>
     );
   }

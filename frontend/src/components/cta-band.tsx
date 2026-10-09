@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export function CtaBand({
   title = "Ready to pick your date?",
-  text = "See open IELTS dates and seats, then finish your booking with us on WhatsApp.",
+  text = "See open IELTS dates and seats, then book it in a few steps.",
 }: {
   title?: string;
   text?: string;

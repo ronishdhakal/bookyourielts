@@ -102,8 +102,8 @@ export function InquiryForm({
       <div role="status" className="border-ok bg-white-ish max-w-2xl rounded-md border-2 p-6">
         <h2 className="text-3xl font-extrabold">Thanks, we have your inquiry</h2>
         <p className="text-muted mt-3">
-          We will message you on WhatsApp when a matching date opens. To hear back faster, send us a
-          message now.
+          We will contact you when a matching date opens. To hear back faster, you can message us
+          now.
         </p>
         <div className="mt-5 flex flex-col gap-3 sm:flex-row">
           <a
@@ -135,7 +135,7 @@ export function InquiryForm({
           required
         />
         <TextField
-          label="Phone / WhatsApp"
+          label="Mobile number"
           type="tel"
           inputMode="tel"
           autoComplete="tel"

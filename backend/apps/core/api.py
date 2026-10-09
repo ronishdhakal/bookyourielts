@@ -102,3 +102,15 @@ class ContentBlockListView(APIView):
     @extend_schema(responses=ContentBlockSerializer(many=True))
     def get(self, request):
         return Response(ContentBlockSerializer(ContentBlock.objects.all(), many=True).data)
+
+
+class RegionsView(APIView):
+    """Provinces and their districts, for the address fields on the booking form."""
+
+    permission_classes = [AllowAny]
+
+    @extend_schema(responses=inline_serializer("Regions", {"provinces": serializers.DictField()}))
+    def get(self, request):
+        from .nepal import PROVINCES
+
+        return Response({"provinces": PROVINCES})

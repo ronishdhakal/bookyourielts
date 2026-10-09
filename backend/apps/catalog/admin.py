@@ -11,7 +11,16 @@ from unfold.decorators import action, display
 
 from apps.core.models import SiteSettings
 
-from .models import City, SeatStatus, SessionSlot, TestFormat, TestSession, TestType, Venue
+from .models import (
+    City,
+    Provider,
+    SeatStatus,
+    SessionSlot,
+    TestFormat,
+    TestSession,
+    TestType,
+    Venue,
+)
 
 
 @admin.register(City)
@@ -37,6 +46,7 @@ class TestTypeAdmin(ModelAdmin):
 
 
 class BulkCreateForm(forms.Form):
+    provider = forms.ChoiceField(choices=Provider.choices, initial=Provider.BRITISH_COUNCIL)
     cities = forms.ModelMultipleChoiceField(
         queryset=City.objects.filter(is_active=True), widget=forms.CheckboxSelectMultiple
     )
@@ -81,6 +91,7 @@ class SeatStatusFilter(admin.SimpleListFilter):
 class TestSessionAdmin(ModelAdmin):
     list_display = [
         "date",
+        "provider",
         "slot",
         "city",
         "test_type",
@@ -92,7 +103,7 @@ class TestSessionAdmin(ModelAdmin):
         "is_visible",
     ]
     list_editable = ["is_visible"]
-    list_filter = ["city", "test_type", "format", "is_visible", "date", SeatStatusFilter]
+    list_filter = ["provider", "city", "test_type", "format", "is_visible", "date", SeatStatusFilter]
     list_select_related = ["city", "venue", "test_type"]
     search_fields = ["city__name", "venue__name", "notes"]
     date_hierarchy = "date"
@@ -101,7 +112,7 @@ class TestSessionAdmin(ModelAdmin):
     actions_list = ["bulk_create"]
     list_per_page = 50
     fieldsets = (
-        ("When and where", {"fields": ("date", "slot", "city", "venue")}),
+        ("When and where", {"fields": ("date", "provider", "slot", "city", "venue")}),
         ("Test", {"fields": ("test_type", "format", "fee_npr")}),
         (
             "Seats",
@@ -152,6 +163,7 @@ class TestSessionAdmin(ModelAdmin):
                 new_date = s.date + timedelta(days=7)
                 _, was_created = TestSession.objects.get_or_create(
                     date=new_date,
+                    provider=s.provider,
                     slot=s.slot,
                     city=s.city,
                     test_type=s.test_type,
@@ -192,6 +204,7 @@ class TestSessionAdmin(ModelAdmin):
                                 for slot in d["slots"]:
                                     _, was_created = TestSession.objects.get_or_create(
                                         date=day,
+                                        provider=d["provider"],
                                         slot=slot,
                                         city=city,
                                         test_type=tt,

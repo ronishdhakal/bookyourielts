@@ -1,19 +1,21 @@
-/** Wordmark: a small ticket-stub mark (two notches, one peak) plus the name. */
-export function Logo({ light = false }: { light?: boolean }) {
-  return (
-    <span className="flex items-center gap-2.5">
-      <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden>
-        <path
-          d="M3 7a2 2 0 0 1 2-2h22a2 2 0 0 1 2 2v5a3 3 0 0 0 0 6v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a3 3 0 0 0 0-6V7Z"
-          fill="#b8232b"
-        />
-        <path d="M8 22l5.5-8 3.5 5 2.5-3L24 22H8Z" fill="#fbfcfa" />
-      </svg>
-      <span
-        className={`font-display text-[1.2rem] leading-none font-bold tracking-tight ${light ? "text-board" : "text-ink"}`}
-      >
-        bookyourielts<span className={light ? "text-marigold" : "text-crimson"}>.com</span>
-      </span>
-    </span>
+import Image from "next/image";
+
+/**
+ * The brand logo (public/static/logo.png, 1272x457). Its lettering is dark, so on dark
+ * backgrounds it sits on a light plate (`onDark`).
+ */
+export function Logo({ onDark = false, height = 40 }: { onDark?: boolean; height?: number }) {
+  const width = Math.round((height * 1272) / 457);
+  const img = (
+    <Image
+      src="/static/logo.png"
+      alt="BookYourIELTS.com"
+      width={width}
+      height={height}
+      priority
+      style={{ height, width: "auto" }}
+    />
   );
+  if (!onDark) return img;
+  return <span className="bg-white-ish inline-block rounded-md px-3 py-2">{img}</span>;
 }

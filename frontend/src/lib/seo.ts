@@ -36,7 +36,7 @@ export const organizationLd = (contactEmail?: string, phone?: string) => ({
   "@type": "Organization",
   name: SITE_NAME,
   url: SITE_URL,
-  logo: `${SITE_URL}/icon.svg`,
+  logo: `${SITE_URL}/static/logo.png`,
   description: "Independent IELTS booking assistance for students in Nepal.",
   areaServed: { "@type": "Country", name: "Nepal" },
   ...(contactEmail || phone

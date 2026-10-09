@@ -17,8 +17,11 @@ ACTIVE = (BookingStatus.INITIATED, BookingStatus.CONFIRMED)
 
 
 @transaction.atomic
-def create_booking(user, session_id: int) -> tuple[BookingRequest, bool]:
-    """Create (or reuse) an initiated booking request. Returns (booking, created)."""
+def create_booking(user, session_id: int, details: dict | None = None) -> tuple[BookingRequest, bool]:
+    """Create (or reuse) an initiated booking request. Returns (booking, created).
+
+    `details` holds the candidate fields from the booking form. When an active request for the
+    same date exists it is updated with them instead of creating a duplicate."""
     session = (
         TestSession.objects.select_related("city", "venue", "test_type")
         .filter(pk=session_id, is_visible=True)
@@ -32,9 +35,17 @@ def create_booking(user, session_id: int) -> tuple[BookingRequest, bool]:
         raise BookingError("This date is full. Please choose another date or send us an inquiry.")
 
     existing = BookingRequest.objects.filter(user=user, session=session, status__in=ACTIVE).first()
+    details = details or {}
     if existing:
+        for key, value in details.items():
+            if value not in (None, "", False):
+                setattr(existing, key, value)
+        existing.whatsapp_clicked_at = timezone.now()
+        existing.save()
         return existing, False
-    booking = BookingRequest.objects.create(user=user, session=session, whatsapp_clicked_at=timezone.now())
+    booking = BookingRequest.objects.create(
+        user=user, session=session, whatsapp_clicked_at=timezone.now(), **details
+    )
     return booking, True
 
 
@@ -71,7 +82,7 @@ def booking_whatsapp_url(booking: BookingRequest) -> str:
     s = booking.session
     text = _safe_format(
         cfg.booking_message_template,
-        full_name=booking.user.full_name,
+        full_name=booking.candidate_name or booking.user.full_name,
         test_type=s.test_type.name,
         format=s.get_format_display(),
         date=_fmt_date(s.date),

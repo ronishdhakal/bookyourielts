@@ -9,6 +9,9 @@ services:
       DEBUG: "false"
       DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
     ports: ["127.0.0.1:${BACKEND_PORT}:8000"]
+    volumes:
+      # Uploaded passports. Shared by blue and green so a deploy never loses them; never served publicly.
+      - media:/app/media
     networks: [byi]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/healthz').status==200 else 1)"]
@@ -19,6 +22,7 @@ services:
       context: ../frontend
       args:
         NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
     restart: unless-stopped
     env_file: ../.env
     environment:
@@ -32,3 +36,6 @@ networks:
   byi:
     external: true
     name: byi
+volumes:
+  media:
+    name: byi-media
