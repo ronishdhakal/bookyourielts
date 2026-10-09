@@ -80,6 +80,9 @@ async function adminLogin(page: Page) {
 }
 
 test.beforeEach(async ({ context }) => {
+  // Analytics is not part of what the tests check, and must not slow them down.
+  await context.route("**/googletagmanager.com/**", (route) => route.abort());
+  await context.route("**/google-analytics.com/**", (route) => route.abort());
   // Never hit the real WhatsApp during tests.
   await context.route("https://wa.me/**", (route) =>
     route.fulfill({ contentType: "text/html", body: "<title>WhatsApp (test double)</title>" }),

@@ -1,10 +1,14 @@
 import type { Metadata, Viewport } from "next";
 import { Public_Sans } from "next/font/google";
+import Script from "next/script";
 import { AuthProvider } from "@/components/auth-provider";
 import { JsonLd } from "@/components/json-ld";
 import { getSite } from "@/lib/site";
 import { SITE_NAME, SITE_URL, organizationLd } from "@/lib/seo";
 import "./globals.css";
+
+/** Google Analytics. Only loads in production builds; override the id with NEXT_PUBLIC_GA_ID. */
+const GA_ID = process.env.NEXT_PUBLIC_GA_ID ?? "G-DFESYKD5QR";
 
 const sans = Public_Sans({
   subsets: ["latin"],
@@ -44,6 +48,20 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         </a>
         <AuthProvider>{children}</AuthProvider>
         <JsonLd data={organizationLd(site.contact_email, site.contact_phone)} />
+        {process.env.NODE_ENV === "production" && GA_ID && (
+          <>
+            <Script
+              src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
+              strategy="afterInteractive"
+            />
+            <Script id="ga-init" strategy="afterInteractive">
+              {`window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', '${GA_ID}');`}
+            </Script>
+          </>
+        )}
       </body>
     </html>
   );
