@@ -186,6 +186,8 @@ EMAIL_HOST_USER = env("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD")
 EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", True) and not EMAIL_USE_SSL
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", "bookyourielts.com <no-reply@bookyourielts.com>")
+# The team gets an email for every new booking request. Comma separated.
+ADMIN_NOTIFY_EMAILS = env_list("ADMIN_NOTIFY_EMAILS", "sabinbaniya73@gmail.com")
 
 # --- DRF --------------------------------------------------------------------
 REST_FRAMEWORK = {

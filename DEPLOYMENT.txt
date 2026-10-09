@@ -80,6 +80,7 @@ Step 2. Create the .env file (never commit it)
     EMAIL_HOST_USER=bookyourielts@gmail.com
     EMAIL_HOST_PASSWORD=<16-character app password, spaces removed>
     DEFAULT_FROM_EMAIL=bookyourielts.com <bookyourielts@gmail.com>
+    ADMIN_NOTIFY_EMAILS=sabinbaniya73@gmail.com    the team is emailed for every new booking request
 
   Protect the file:   chmod 600 .env
 

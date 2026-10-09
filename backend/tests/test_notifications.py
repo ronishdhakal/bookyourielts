@@ -194,3 +194,32 @@ def test_declining_a_date_change_keeps_the_booking(student, staff, make_session)
         f"/api/v1/manage/bookings/{bk.pk}/", {"resolve_change": True}, format="json"
     )
     assert res.json()["session"]["id"] == a.pk and res.json()["requested_session"] is None
+
+
+def test_first_request_emails_the_student_and_the_team(
+    student, make_session, settings, django_capture_on_commit_callbacks
+):
+    settings.ADMIN_NOTIFY_EMAILS = ["sabinbaniya73@gmail.com"]
+    session = make_session()
+    with django_capture_on_commit_callbacks(execute=True):
+        b, _ = services.create_booking(student, session.pk, {})
+    to_student = [m for m in mail.outbox if m.to == [student.email]]
+    to_team = [m for m in mail.outbox if m.to == ["sabinbaniya73@gmail.com"]]
+    assert len(to_student) == 1 and "received your request" in to_student[0].subject
+    html = to_student[0].alternatives[0][0]
+    assert "#c80530" in html and b.reference in html and "/portal/bookings/" in html
+    assert (
+        len(to_team) == 1
+        and b.reference in to_team[0].subject
+        and "/portal/manage/bookings/" in to_team[0].body
+    )
+    assert "Passport photo" in to_team[0].body
+
+
+def test_no_team_email_when_no_recipients(
+    student, make_session, settings, django_capture_on_commit_callbacks
+):
+    settings.ADMIN_NOTIFY_EMAILS = []
+    with django_capture_on_commit_callbacks(execute=True):
+        services.create_booking(student, make_session().pk, {})
+    assert [m.to for m in mail.outbox] == [[student.email]]

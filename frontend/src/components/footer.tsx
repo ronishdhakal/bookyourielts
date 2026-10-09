@@ -13,6 +13,27 @@ export async function Footer() {
           <p className="text-board/80 mt-4 max-w-xs text-[0.9375rem]">
             We help students in Nepal find IELTS dates and finish their booking.
           </p>
+          <ul className="mt-5 space-y-2 text-[0.9375rem]">
+            <li>
+              <span className="text-board/60 block text-[0.75rem] tracking-wider uppercase">
+                Email
+              </span>
+              <a
+                href="mailto:bookyourielts@gmail.com"
+                className="underline-offset-4 hover:underline"
+              >
+                bookyourielts@gmail.com
+              </a>
+            </li>
+            <li>
+              <span className="text-board/60 block text-[0.75rem] tracking-wider uppercase">
+                Phone
+              </span>
+              <a href="tel:+9779860688212" className="underline-offset-4 hover:underline">
+                9860688212
+              </a>
+            </li>
+          </ul>
         </div>
         <FooterCol
           title="Book"

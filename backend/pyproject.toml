@@ -14,6 +14,7 @@ ignore = ["DJ001", "DJ012"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["E501"]
+"apps/core/emailing.py" = ["E501"]  # inline-styled HTML
 
 [tool.ruff.format]
 quote-style = "double"
