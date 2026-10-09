@@ -71,7 +71,7 @@ def load(apps, schema_editor):
     SiteSettings = apps.get_model("core", "SiteSettings")
     import os
 
-    SiteSettings.objects.get_or_create(pk=1, defaults={"whatsapp_number": os.environ.get("ADMIN_WHATSAPP_NUMBER", "9779800000000")})
+    SiteSettings.objects.get_or_create(pk=1, defaults={"whatsapp_number": os.environ.get("ADMIN_WHATSAPP_NUMBER", "9779860688212")})
     for i, (page, q, a) in enumerate(FAQS):
         FAQ.objects.get_or_create(question=q, defaults={"page": page, "answer": a, "order": i})
     for key, title, body in BLOCKS:

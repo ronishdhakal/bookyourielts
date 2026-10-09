@@ -73,6 +73,7 @@ jobs:
       API_ORIGIN: http://localhost:8000
       AUTH_RATE: 500/min
       INQUIRY_RATE: 500/hour
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -91,12 +92,25 @@ jobs:
           python manage.py seed_demo --admin
           nohup gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 2 > /tmp/api.log 2>&1 &
           for i in $(seq 1 30); do curl -fsS localhost:8000/healthz && break || sleep 1; done
+      - name: Cache Playwright browsers
+        id: pw-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}
+      - name: Install Chromium
+        working-directory: frontend
+        run: |
+          if [ "${{ steps.pw-cache.outputs.cache-hit }}" = "true" ]; then
+            npx playwright install-deps chromium
+          else
+            npx playwright install --with-deps chromium
+          fi
       - name: Build and run Playwright
         working-directory: frontend
         run: |
           npm ci
           npm run build
-          npx playwright install --with-deps chromium
           npx playwright test
       - uses: actions/upload-artifact@v4
         if: failure()

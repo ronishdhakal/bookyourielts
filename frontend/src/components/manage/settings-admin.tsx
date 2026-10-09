@@ -53,7 +53,7 @@ export function SettingsAdmin() {
               value={f.whatsapp_number}
               onChange={(v) => set("whatsapp_number", v)}
               error={errors.whatsapp_number}
-              hint="Digits only with the country code and no plus sign, for example 9779812345678."
+              hint="Digits only with the country code and no plus sign, for example 9779860688212."
               inputMode="numeric"
             />
             <TextField

@@ -3,9 +3,9 @@ import { fetchSite } from "./server-api";
 import type { SiteInfo } from "./types";
 
 export const DEFAULT_SITE: SiteInfo = {
-  whatsapp_number: process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "9779800000000",
-  contact_email: "",
-  contact_phone: "",
+  whatsapp_number: process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "9779860688212",
+  contact_email: "bookyourielts@gmail.com",
+  contact_phone: "9860688212",
   office_address: "",
   low_seat_threshold: 5,
   announcement: "",

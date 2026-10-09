@@ -8,7 +8,7 @@ from django.db import models
 
 def _validate_whatsapp_number(value: str) -> None:
     if not re.fullmatch(r"\d{8,15}", value):
-        raise ValidationError("Digits only, with country code and no + sign, e.g. 9779800000000.")
+        raise ValidationError("Digits only, with country code and no + sign, e.g. 9779860688212.")
 
 
 class SiteSettings(models.Model):
@@ -17,7 +17,7 @@ class SiteSettings(models.Model):
     whatsapp_number = models.CharField(
         max_length=20,
         validators=[_validate_whatsapp_number],
-        help_text="Admin WhatsApp number with country code, digits only (e.g. 9779812345678).",
+        help_text="Admin WhatsApp number with country code, digits only (e.g. 9779860688212).",
     )
     booking_message_template = models.TextField(
         default=(
@@ -75,7 +75,7 @@ class SiteSettings(models.Model):
     @classmethod
     def load(cls) -> "SiteSettings":
         obj, _ = cls.objects.get_or_create(
-            pk=1, defaults={"whatsapp_number": os.environ.get("ADMIN_WHATSAPP_NUMBER", "9779800000000")}
+            pk=1, defaults={"whatsapp_number": os.environ.get("ADMIN_WHATSAPP_NUMBER", "9779860688212")}
         )
         return obj
 

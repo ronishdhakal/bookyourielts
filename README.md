@@ -65,7 +65,7 @@ cd backend
 python -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\activate
 pip install -r requirements/dev.txt
 export DEBUG=true DATABASE_URL=postgres://bookyourielts:bookyourielts@127.0.0.1:5433/bookyourielts
-export ADMIN_WHATSAPP_NUMBER=9779812345678
+export ADMIN_WHATSAPP_NUMBER=9779860688212
 python manage.py migrate                 # also loads cities, test types, FAQs, content blocks
 python manage.py seed_demo --admin       # demo venues + dates, and admin@example.com / admin12345 (dev only)
 python manage.py runserver 8000          # on Windows prefer: python -m waitress --port=8000 config.wsgi:application
