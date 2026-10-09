@@ -70,7 +70,7 @@ def test_booking_with_saved_candidate_fills_details_and_passport(
     cand = Candidate.objects.create(
         user=user, **{k: v for k, v in PERSON.items() if k != "phone"}, phone="+9779800002222"
     )
-    cand.passport_front = SimpleUploadedFile("p.jpg", JPEG, "image/jpeg")
+    cand.passport = SimpleUploadedFile("p.jpg", JPEG, "image/jpeg")
     cand.save()
     s = make_session()
     res = auth_api.post(
@@ -79,7 +79,7 @@ def test_booking_with_saved_candidate_fills_details_and_passport(
     assert res.status_code == 201
     b = BookingRequest.objects.get()
     assert b.candidate_id == cand.pk and b.candidate_name == "Maya Gurung" and b.district == "Kaski"
-    assert b.passport_front and res.data["has_passport"] is True
+    assert b.passport and res.data["has_passport"] is True
     assert "my name is Maya Gurung" in res.data["whatsapp_url"].replace("%20", " ")
 
 
@@ -116,20 +116,18 @@ def test_passport_can_be_added_after_booking(auth_api, make_session, settings, t
     settings.MEDIA_ROOT = tmp_path
     s = make_session()
     b = auth_api.post("/api/v1/bookings/", {"session": s.pk}, format="json").data
-    assert b["has_passport"] is False
+    assert b["has_passport"] is True  # it is required to book; this replaces it
     url = f"/api/v1/bookings/{b['id']}/documents/"
     res = auth_api.post(
-        url, {"passport_front": SimpleUploadedFile("a.jpg", JPEG, "image/jpeg")}, format="multipart"
+        url, {"passport": SimpleUploadedFile("a.jpg", JPEG, "image/jpeg")}, format="multipart"
     )
-    assert (
-        res.status_code == 200 and res.data["has_passport"] is True and res.data["has_passport_back"] is False
-    )
+    assert res.status_code == 200 and res.data["has_passport"] is True
     assert auth_api.post(url, {}, format="multipart").status_code == 400
-    bad = auth_api.post(url, {"passport_back": SimpleUploadedFile("a.exe", JPEG)}, format="multipart")
-    assert bad.status_code == 400 and "passport_back" in bad.data
+    bad = auth_api.post(url, {"passport": SimpleUploadedFile("a.exe", JPEG)}, format="multipart")
+    assert bad.status_code == 400 and "passport" in bad.data
     assert (
         other_client(django_user_model)
-        .post(url, {"passport_front": SimpleUploadedFile("a.jpg", JPEG)}, format="multipart")
+        .post(url, {"passport": SimpleUploadedFile("a.jpg", JPEG)}, format="multipart")
         .status_code
         == 404
     )

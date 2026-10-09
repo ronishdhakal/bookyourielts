@@ -102,9 +102,7 @@ export function Candidates() {
               typeof editing === "number"
                 ? (() => {
                     const c = list.data?.find((x) => x.id === editing);
-                    return c
-                      ? { front: c.has_passport_front, back: c.has_passport_back }
-                      : undefined;
+                    return c ? c.has_passport : undefined;
                   })()
                 : undefined
             }
@@ -159,7 +157,7 @@ export function Candidates() {
                 <p className="text-muted text-[0.875rem]">
                   {c.phone || "No mobile"} ·{" "}
                   {c.date_of_birth ? formatDate(c.date_of_birth) : "No date of birth"} · Passport{" "}
-                  {c.has_passport_front ? "saved" : "not saved"}
+                  {c.has_passport ? "saved" : "not saved"}
                 </p>
               </div>
               {askDelete === c.id ? (

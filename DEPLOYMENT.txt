@@ -1,0 +1,190 @@
+DEPLOYING bookyourielts.com ON THE VPS (srv890277)
+==================================================
+
+What runs, and how it stays out of the way of your other apps
+--------------------------------------------------------------
+  * Every container is started under its own compose project name (byi-blue, byi-green,
+    byi-shared), so container, volume and network names all start with "byi" and cannot clash
+    with sin_*, nebexam-*, entrance-*, abroad_* or the *-db containers.
+  * Published ports are bound to 127.0.0.1 only (nothing is reachable from the internet except
+    through nginx), and they were chosen to be free on this server:
+
+        colour   backend (Django)   frontend (Next.js)
+        blue     127.0.0.1:8071     127.0.0.1:3071
+        green    127.0.0.1:8072     127.0.0.1:3072
+
+    Already taken on this server: 3002, 3003, 3101, 8000, 8011, 8031, 8056, 8090, 8443 (and 5432
+    inside the database containers). If one of ours ever collides, set BYI_BLUE_BACKEND_PORT,
+    BYI_BLUE_FRONTEND_PORT, BYI_GREEN_BACKEND_PORT or BYI_GREEN_FRONTEND_PORT before running
+    deploy.sh. Check first with:   ss -ltnp | grep -E ':(8071|8072|3071|3072)\b'
+  * PostgreSQL has its own container (byi-shared-db-1) on a private docker network called "byi".
+    It publishes no port at all. The app reaches it as "db" inside that network.
+  * Only one colour is live at a time. deploy.sh builds the idle colour, checks it, switches
+    nginx to it, then stops the old one, so a deploy has no downtime.
+  * Uploaded passports live in the docker volume "byi-media". They are never served by nginx;
+    only logged-in staff can open them through the API.
+
+What you need before you start
+------------------------------
+  * A VPS user that can run docker, docker compose and sudo (you are root, so this is fine).
+  * nginx installed on the host and already serving your other sites (the docker ps list shows
+    no container on ports 80/443, so nginx on the host is assumed). If another proxy owns 80/443,
+    add the two server blocks from deploy/nginx/bookyourielts.conf to it instead.
+  * DNS for  bookyourielts.com, www.bookyourielts.com and users.bookyourielts.com  pointing at
+    the server (the deploy/nginx file assumes Cloudflare in front; see step 6 for plain Let's
+    Encrypt instead).
+  * The Gmail account bookyourielts@gmail.com with an App Password (Google Account > Security >
+    2-Step Verification > App passwords). Use a NEW app password for production.
+
+Step 1. Get the code on the server
+----------------------------------
+    mkdir -p /srv && cd /srv
+    git clone <your repository url> bookyourielts
+    cd bookyourielts
+
+Step 2. Create the .env file (never commit it)
+----------------------------------------------
+    cp .env.example .env
+    nano .env
+
+  Fill in at least:
+    SECRET_KEY=<long random string>            python3 -c "import secrets; print(secrets.token_urlsafe(60))"
+    DEBUG=false
+    ALLOWED_HOSTS=bookyourielts.com,www.bookyourielts.com,users.bookyourielts.com
+    FRONTEND_URL=https://bookyourielts.com
+    CORS_ALLOWED_ORIGINS=https://bookyourielts.com,https://users.bookyourielts.com
+    CSRF_TRUSTED_ORIGINS=https://bookyourielts.com,https://users.bookyourielts.com
+    COOKIE_DOMAIN=.bookyourielts.com
+    POSTGRES_USER=bookyourielts
+    POSTGRES_PASSWORD=<strong password>
+    POSTGRES_DB=bookyourielts
+    ADMIN_WHATSAPP_NUMBER=97798XXXXXXXX        digits only, country code, no +
+    NEXT_PUBLIC_SITE_URL=https://bookyourielts.com
+    NEXT_PUBLIC_APP_URL=https://users.bookyourielts.com
+    NEXT_PUBLIC_WHATSAPP_NUMBER=97798XXXXXXXX
+
+  Email (so students get booking updates by email as well as in their portal):
+    EMAIL_HOST=smtp.gmail.com
+    EMAIL_PORT=587
+    EMAIL_USE_TLS=true
+    EMAIL_HOST_USER=bookyourielts@gmail.com
+    EMAIL_HOST_PASSWORD=<16-character app password, spaces removed>
+    DEFAULT_FROM_EMAIL=bookyourielts.com <bookyourielts@gmail.com>
+
+  Protect the file:   chmod 600 .env
+
+  Notes
+    * Leave EMAIL_HOST empty to run without email: messages are then only written to the log and
+      students still see every notification in their portal.
+    * Gmail limits how many messages an account can send per day. For higher volume later, switch
+      to a mail service (SendGrid, Mailgun, Amazon SES, Zoho). Only the EMAIL_* values change.
+    * NEXT_PUBLIC_* values are baked into the frontend when it is built, so changing them needs a
+      new deploy.
+
+Step 3. Start the database (once)
+---------------------------------
+    cd /srv/bookyourielts
+    docker compose -f deploy/docker-compose.db.yml --env-file .env up -d
+    docker ps --filter name=byi-shared
+
+  It should show "healthy" after a few seconds. This also creates the private network "byi".
+
+Step 4. First deploy
+--------------------
+    chmod +x deploy/deploy.sh
+    ./deploy/deploy.sh
+
+  The script builds the backend and frontend images, waits until both answer, warms the page
+  caches, writes /etc/nginx/byi-upstreams.conf, and stops the previous colour. The first run
+  picks "blue" (127.0.0.1:8071 and :3071). The backend applies database migrations on start.
+
+  It needs the nginx files from step 5 in place to switch traffic, so if this is the very first
+  run, do step 5 first and run deploy.sh after it (running it twice is harmless).
+
+Step 5. nginx
+-------------
+    cp deploy/nginx/byi-proxy.conf /etc/nginx/byi-proxy.conf
+    cp deploy/nginx/bookyourielts.conf /etc/nginx/sites-available/bookyourielts.conf
+    ln -s /etc/nginx/sites-available/bookyourielts.conf /etc/nginx/sites-enabled/
+    printf 'upstream byi_backend { server 127.0.0.1:8071; }\nupstream byi_frontend { server 127.0.0.1:3071; }\n' > /etc/nginx/byi-upstreams.conf
+    echo blue > /etc/nginx/byi-active-color
+    nginx -t && systemctl reload nginx
+
+  The upstream names (byi_backend, byi_frontend) are unique to this app, so they do not clash with
+  your other sites' upstreams. deploy.sh rewrites byi-upstreams.conf on every deploy.
+
+Step 6. HTTPS
+-------------
+  Option A: Cloudflare in front (what the nginx file is written for)
+    * Cloudflare > SSL/TLS > Origin Server > create a certificate for
+      bookyourielts.com and *.bookyourielts.com. Save it as
+      /etc/ssl/cloudflare/bookyourielts.pem and the key as /etc/ssl/cloudflare/bookyourielts.key
+      (chmod 600 on the key).
+    * Cloudflare SSL mode: Full (strict).
+    * Create /etc/nginx/cloudflare-ips.conf with one line per published Cloudflare range:
+          set_real_ip_from 173.245.48.0/20;     (list: https://www.cloudflare.com/ips/)
+      so rate limits and logs see the visitor's real IP.
+
+  Option B: Let's Encrypt without Cloudflare
+    * apt install certbot python3-certbot-nginx
+    * In deploy/nginx/bookyourielts.conf replace the ssl_certificate lines with the paths certbot
+      prints, remove the CF-Connecting-IP and cloudflare-ips lines, then:
+          certbot --nginx -d bookyourielts.com -d www.bookyourielts.com -d users.bookyourielts.com
+
+Step 7. Create the first admin and check the site
+-------------------------------------------------
+    docker compose -p byi-blue --env-file .env -f deploy/docker-compose.prod.yml \
+        exec backend python manage.py createsuperuser
+    docker compose -p byi-blue --env-file .env -f deploy/docker-compose.prod.yml \
+        exec backend python manage.py send_test_email you@example.com
+
+  (Use -p byi-green instead if green is the live colour: cat /etc/nginx/byi-active-color.
+  The first command needs BACKEND_PORT and FRONTEND_PORT set to run, so prefix both lines with
+  BACKEND_PORT=8071 FRONTEND_PORT=3071 for blue, or 8072 and 3072 for green.)
+
+  Then in a browser:
+    https://bookyourielts.com                  the public site
+    https://users.bookyourielts.com            the student portal
+    https://users.bookyourielts.com/portal/manage   the admin dashboard (log in with the admin)
+    https://bookyourielts.com/admin/           the Django admin (advanced)
+    https://bookyourielts.com/healthz          should say ok
+
+  In the admin dashboard:  Settings > set the WhatsApp number and contact email; Test dates >
+  add dates (or "Bulk create" in the Django admin).
+
+Everyday: deploying an update
+-----------------------------
+    cd /srv/bookyourielts
+    git pull
+    ./deploy/deploy.sh
+
+  If the new version does not become healthy, the script stops it and leaves the current one
+  live. To go back to the previous colour manually:
+      cat /etc/nginx/byi-active-color                 the colour that is live now
+      (re-run the printf line from step 5 with the other colour's ports, nginx -t, reload)
+
+Backups (do this before you rely on the site)
+---------------------------------------------
+  Database, nightly:
+      0 2 * * *  docker exec byi-shared-db-1 pg_dump -U bookyourielts bookyourielts | gzip > /var/backups/byi-$(date +\%F).sql.gz
+  Passports (docker volume byi-media):
+      docker run --rm -v byi-media:/media -v /var/backups:/backup alpine tar czf /backup/byi-media-$(date +%F).tgz -C /media .
+  Copy /var/backups off the server regularly. Passport photos are personal data: keep backups
+  private and delete old ones.
+
+Useful commands
+---------------
+    docker ps --filter name=byi                               what is running
+    docker logs -f byi-blue-backend-1                         backend log (use byi-green-... when green is live)
+    docker logs -f byi-blue-frontend-1                        frontend log
+    docker compose -f deploy/docker-compose.db.yml --env-file .env ps
+    ss -ltnp | grep -E ':(8071|8072|3071|3072)\b'             our ports
+
+Security checklist
+------------------
+    [ ] DEBUG=false and a long random SECRET_KEY
+    [ ] .env is chmod 600 and not in git
+    [ ] Cloudflare/Let's Encrypt HTTPS works and http redirects to https
+    [ ] The Gmail app password in .env is the production one (not one shared in chat)
+    [ ] Backups are running and one has been restored on a test machine
+    [ ] Firewall: only 22, 80 and 443 open to the internet (ufw status)

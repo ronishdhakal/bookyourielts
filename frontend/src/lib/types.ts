@@ -81,7 +81,6 @@ export interface Booking {
   district: string;
   municipality: string;
   has_passport: boolean;
-  has_passport_back: boolean;
   assigned_slot: "morning" | "afternoon" | "";
   assigned_slot_label: string;
   assigned_venue: string;
@@ -89,6 +88,7 @@ export interface Booking {
   change_request: string;
   change_requested_at: string | null;
   change_open: boolean;
+  requested_session: TestSession | null;
 }
 
 export interface SavedCandidate {
@@ -101,8 +101,7 @@ export interface SavedCandidate {
   province: string;
   district: string;
   municipality: string;
-  has_passport_front: boolean;
-  has_passport_back: boolean;
+  has_passport: boolean;
   created_at: string;
 }
 
@@ -212,8 +211,7 @@ export interface StaffBooking {
   province: string;
   district: string;
   municipality: string;
-  has_passport_front: boolean;
-  has_passport_back: boolean;
+  has_passport: boolean;
   admin_notes: string;
   whatsapp_url: string;
   change_request: string;
@@ -222,6 +220,8 @@ export interface StaffBooking {
   assigned_slot: "morning" | "afternoon" | "";
   assigned_venue: string;
   assigned_at: string | null;
+  remarks: { id: number; body: string; created_at: string; is_read: boolean }[];
+  requested_session: TestSession | null;
 }
 
 export interface StaffInquiry {
@@ -290,7 +290,14 @@ export interface StaffSettings {
 
 export interface PortalNotification {
   id: number;
-  kind: "received" | "confirmed" | "cancelled" | "assigned" | "change_resolved";
+  kind:
+    | "received"
+    | "confirmed"
+    | "cancelled"
+    | "assigned"
+    | "change_resolved"
+    | "remark"
+    | "date_changed";
   title: string;
   body: string;
   booking_id: number | null;

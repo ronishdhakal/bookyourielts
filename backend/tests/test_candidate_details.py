@@ -45,15 +45,14 @@ def test_passport_upload_stored_privately(auth_api, make_session, settings, tmp_
         {
             "session": s.pk,
             **details(),
-            "passport_front": SimpleUploadedFile("front.jpg", JPEG, "image/jpeg"),
-            "passport_back": SimpleUploadedFile("back.pdf", PDF, "application/pdf"),
+            "passport": SimpleUploadedFile("front.jpg", JPEG, "image/jpeg"),
         },
         format="multipart",
     )
     assert res.status_code == 201 and res.data["has_passport"] is True
-    assert "passport_front" not in res.data  # file locations are never exposed to the student API
+    assert "passport" not in res.data  # file locations are never exposed to the student API
     b = BookingRequest.objects.get()
-    assert b.passport_front.name.startswith("passports/") and "front" not in b.passport_front.name
+    assert b.passport.name.startswith("passports/") and "front" not in b.passport.name
 
 
 @pytest.mark.parametrize("case", ["exe", "fake_jpg", "png_with_jpeg_bytes", "too_big"])
@@ -67,9 +66,9 @@ def test_bad_uploads_rejected(auth_api, make_session, settings, tmp_path, case):
     }[case]
     s = make_session()
     res = auth_api.post(
-        URL, {"session": s.pk, "passport_front": SimpleUploadedFile(name, content)}, format="multipart"
+        URL, {"session": s.pk, "passport": SimpleUploadedFile(name, content)}, format="multipart"
     )
-    assert res.status_code == 400 and "passport_front" in res.data
+    assert res.status_code == 400 and "passport" in res.data
 
 
 @pytest.mark.parametrize(
@@ -144,16 +143,20 @@ def test_passport_only_visible_to_staff_through_admin(
     s = make_session()
     auth_api.post(
         URL,
-        {"session": s.pk, "passport_front": SimpleUploadedFile("a.jpg", JPEG, "image/jpeg")},
+        {"session": s.pk, "passport": SimpleUploadedFile("a.jpg", JPEG, "image/jpeg")},
         format="multipart",
     )
     b = BookingRequest.objects.get()
-    url = reverse("admin:bookings_bookingrequest_passport", args=[b.pk, "front"])
+    url = reverse("admin:bookings_bookingrequest_passport", args=[b.pk])
     assert client.get(url).status_code == 302  # anonymous: sent to admin login
     staff = django_user_model.objects.create_superuser("root@example.com", "Str0ng-pass-123", full_name="R")
     client.force_login(staff)
     res = client.get(url)
     assert res.status_code == 200 and "no-store" in res["Cache-Control"] and "private" in res["Cache-Control"]
-    assert (
-        client.get(reverse("admin:bookings_bookingrequest_passport", args=[b.pk, "back"])).status_code == 404
-    )
+
+
+def test_a_passport_photo_is_required(no_passport_api, make_session):
+    s = make_session()
+    res = no_passport_api.post(URL, {"session": s.pk, **details()}, format="json")
+    assert res.status_code == 400 and "passport" in res.data
+    assert not BookingRequest.objects.exists()

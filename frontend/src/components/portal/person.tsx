@@ -17,8 +17,7 @@ export interface PersonForm {
   province: string;
   district: string;
   municipality: string;
-  passportFront: File | null;
-  passportBack: File | null;
+  passport: File | null;
 }
 
 export const EMPTY_PERSON: PersonForm = {
@@ -30,8 +29,7 @@ export const EMPTY_PERSON: PersonForm = {
   province: "",
   district: "",
   municipality: "",
-  passportFront: null,
-  passportBack: null,
+  passport: null,
 };
 
 export const personFromUser = (u: User): PersonForm => ({
@@ -52,13 +50,16 @@ export const personFromCandidate = (c: SavedCandidate): PersonForm => ({
   province: c.province,
   district: c.district,
   municipality: c.municipality,
-  passportFront: null,
-  passportBack: null,
+  passport: null,
 });
 
 export type PersonErrors = Partial<Record<keyof PersonForm, string>>;
 
-export function validatePerson(p: PersonForm): PersonErrors {
+/** `requirePassport`: a photo is needed unless the saved candidate already has one (`savedPassport`). */
+export function validatePerson(
+  p: PersonForm,
+  opts: { requirePassport?: boolean; savedPassport?: boolean } = {},
+): PersonErrors {
   const e: PersonErrors = {};
   if (p.name.trim().length < 2)
     e.name = "Enter the full name exactly as it appears on the passport.";
@@ -73,14 +74,11 @@ export function validatePerson(p: PersonForm): PersonErrors {
   if (!p.province) e.province = "Choose a province.";
   if (!p.district) e.district = "Choose a district.";
   if (p.municipality.trim().length < 2) e.municipality = "Enter your city or municipality.";
-  for (const [k, f] of [
-    ["passportFront", p.passportFront],
-    ["passportBack", p.passportBack],
-  ] as const) {
-    if (f) {
-      const err = validatePassportFile(f);
-      if (err) e[k] = err;
-    }
+  if (p.passport) {
+    const err = validatePassportFile(p.passport);
+    if (err) e.passport = err;
+  } else if (opts.requirePassport && !opts.savedPassport) {
+    e.passport = "Add a photo of the passport page with the photo and name.";
   }
   return e;
 }
@@ -96,8 +94,7 @@ export function appendPerson(form: FormData, p: PersonForm, kind: "booking" | "c
   form.set("district", p.district);
   form.set("municipality", p.municipality.trim());
   if (p.relation.trim() || !k) form.set("relation", p.relation.trim());
-  if (p.passportFront) form.set("passport_front", p.passportFront);
-  if (p.passportBack) form.set("passport_back", p.passportBack);
+  if (p.passport) form.set("passport", p.passport);
 }
 
 export function PersonFields({
@@ -107,12 +104,15 @@ export function PersonFields({
   saved,
   idPrefix = "p",
   showRelation = false,
+  passportRequired = false,
 }: {
   value: PersonForm;
   onChange: (p: PersonForm) => void;
   errors: PersonErrors;
   /** Passport already stored for this person, reused unless a new file is chosen. */
-  saved?: { front: boolean; back: boolean };
+  saved?: boolean;
+  /** The photo is compulsory when booking. */
+  passportRequired?: boolean;
   idPrefix?: string;
   showRelation?: boolean;
 }) {
@@ -257,27 +257,21 @@ export function PersonFields({
       </fieldset>
 
       <fieldset>
-        <legend className="section-title mb-1">Passport (optional)</legend>
+        <legend className="section-title mb-1">
+          Passport photo {passportRequired ? <span className="text-crimson">*</span> : "(optional)"}
+        </legend>
         <p className="text-muted mb-3 text-[0.8125rem]">
-          JPG, PNG, WebP or PDF, up to 10 MB each. Stored privately. You can also add it later from
-          the booking.
+          One photo of the passport page with the photo and name. JPG, PNG, WebP or PDF, up to 10
+          MB. Stored privately.
         </p>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="max-w-md">
           <FileDrop
-            id={`${idPrefix}-front`}
-            label="Passport front"
-            file={value.passportFront}
-            onChange={(f) => set("passportFront", f)}
-            error={errors.passportFront}
-            savedNote={saved?.front ? "Saved passport will be used" : undefined}
-          />
-          <FileDrop
-            id={`${idPrefix}-back`}
-            label="Passport back"
-            file={value.passportBack}
-            onChange={(f) => set("passportBack", f)}
-            error={errors.passportBack}
-            savedNote={saved?.back ? "Saved passport will be used" : undefined}
+            id={`${idPrefix}-passport`}
+            label="Passport photo"
+            file={value.passport}
+            onChange={(f) => set("passport", f)}
+            error={errors.passport}
+            savedNote={saved ? "Saved passport will be used" : undefined}
           />
         </div>
       </fieldset>

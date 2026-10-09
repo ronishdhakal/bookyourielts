@@ -43,6 +43,7 @@ async function fillDetails(
   await drawer.getByLabel(/Province/).selectOption(place.province);
   await drawer.getByLabel(/District/).selectOption(place.district);
   await drawer.getByLabel(/Date of birth/).fill("2001-04-05");
+  await drawer.locator("#bk-passport").setInputFiles(PNG);
   await drawer.getByLabel(/I confirm these details/).check();
 }
 
@@ -52,12 +53,11 @@ async function confirmBooking(page: Page): Promise<string> {
   await drawer.getByRole("button", { name: "Review" }).click();
   await expect(drawer.getByRole("heading", { name: "Review and confirm" })).toBeVisible();
   await drawer.getByLabel(/I agree to the/).check();
-  const popup = page.context().waitForEvent("page");
-  await drawer.getByRole("button", { name: "Confirm and continue on WhatsApp" }).click();
-  const tab = await popup;
-  await tab.waitForURL(/wa\.me/);
-  const text = new URL(tab.url()).searchParams.get("text") ?? "";
-  await tab.close();
+  await drawer.getByRole("button", { name: "Confirm booking" }).click();
+  await expect(drawer.getByText("Your booking request is confirmed")).toBeVisible();
+  const href =
+    (await drawer.getByRole("link", { name: "Message us on WhatsApp" }).getAttribute("href")) ?? "";
+  const text = new URL(href).searchParams.get("text") ?? "";
   const ref = text.match(/BYI-\d{4}-\d{6}/)?.[0] ?? "";
   expect(ref).not.toBe("");
   return ref;
@@ -134,11 +134,12 @@ test("filter dates, log in, and book with WhatsApp only at the last step", async
   // Only now does the flow mention WhatsApp.
   await expect(drawer.getByText(/WhatsApp/).first()).toBeVisible();
   await drawer.getByLabel(/I agree to the/).check();
-  const popupPromise = page.context().waitForEvent("page");
-  await drawer.getByRole("button", { name: "Confirm and continue on WhatsApp" }).click();
-  const popup = await popupPromise;
-  await popup.waitForURL(/wa\.me/);
-  const text = new URL(popup.url()).searchParams.get("text") ?? "";
+  await drawer.getByRole("button", { name: "Confirm booking" }).click();
+  await expect(drawer.getByText("Your booking request is confirmed")).toBeVisible();
+  const href =
+    (await drawer.getByRole("link", { name: "Message us on WhatsApp" }).getAttribute("href")) ?? "";
+  expect(href).toMatch(/^https:\/\/wa\.me\//);
+  const text = new URL(href).searchParams.get("text") ?? "";
   expect(text).toContain("Hi, my name is Test Student. I want to book IELTS.");
   expect(text).toContain("City: Pokhara");
   expect(text).toMatch(/Reference: BYI-\d{4}-\d{6}/);
@@ -245,6 +246,7 @@ test("find a date: filters, list and month views, and the booking panel", async 
   await drawer.getByRole("button", { name: "Review" }).click();
   await expect(drawer.getByText("Enter the date of birth.")).toBeVisible();
   await expect(drawer.getByText("Choose a province.")).toBeVisible();
+  await expect(drawer.getByText(/Add a photo of the passport page/)).toBeVisible();
   await expect(
     drawer.getByText("Please confirm that the details match the passport."),
   ).toBeVisible();
@@ -318,11 +320,10 @@ test("a booking page tracks progress, adds a calendar entry, takes passports and
   expect((await download).suggestedFilename()).toBe(`${ref}.ics`);
 
   // Passport added after booking
-  await expect(page.getByText(/Front: missing/)).toBeVisible();
-  await page.locator("#doc-front").setInputFiles(PNG);
+  await expect(page.getByText(/Uploaded\. Stored privately/)).toBeVisible();
+  await page.locator("#doc-passport").setInputFiles(PNG);
   await page.getByRole("button", { name: "Upload", exact: true }).click();
   await expect(page.getByText("Passport uploaded.")).toBeVisible();
-  await expect(page.getByText(/Front: uploaded/)).toBeVisible();
 
   // Change request
   await page.getByLabel("Tell us what to change").fill("Please move me to the following week.");
@@ -571,4 +572,73 @@ test("staff can delete a booking request and an inquiry in bulk", async ({ page,
   await page.getByRole("button", { name: "Delete selected" }).click();
   await page.getByRole("button", { name: "Yes, delete" }).click();
   await expect(page.getByText("1 deleted.")).toBeVisible();
+});
+
+test("staff send a remark and the student reads it on the booking", async ({ page, browser }) => {
+  const sctx = await browser.newContext();
+  const sp = await sctx.newPage();
+  await register(sp, "/portal/dates?city=chitwan");
+  await sp
+    .getByRole("button", { name: /^Select/ })
+    .first()
+    .click();
+  await fillDetails(sp, { province: "Bagmati", district: "Chitwan", city: "Bharatpur" });
+  const reference = await confirmBooking(sp);
+
+  await adminLogin(page);
+  await page.goto(`/portal/manage/bookings?q=${reference}`);
+  await page.getByRole("link", { name: reference }).first().click();
+  await page
+    .getByLabel("Message", { exact: true })
+    .fill("Please bring a printed copy of the passport.");
+  await page.getByRole("button", { name: "Send to student" }).click();
+  await expect(page.getByText("Not seen yet")).toBeVisible();
+
+  await sp.goto("/portal");
+  await expect(sp.getByRole("region", { name: "Latest update" })).toContainText(
+    "Please bring a printed copy",
+  );
+  await sp.getByRole("link", { name: "View booking" }).click();
+  await expect(sp.getByRole("heading", { name: "Messages from our team" })).toBeVisible();
+  await sctx.close();
+});
+
+test("a student changes the date, and a confirmed booking waits for staff approval", async ({
+  page,
+  browser,
+}) => {
+  const sctx = await browser.newContext();
+  const sp = await sctx.newPage();
+  await register(sp, "/portal/dates?city=chitwan");
+  await sp
+    .getByRole("button", { name: /^Select/ })
+    .first()
+    .click();
+  await fillDetails(sp, { province: "Bagmati", district: "Chitwan", city: "Bharatpur" });
+  const reference = await confirmBooking(sp);
+  await sp.getByRole("dialog").getByRole("link", { name: "View this request" }).click();
+
+  // Not confirmed yet: the move happens at once.
+  await sp.getByLabel("New date").selectOption({ index: 1 });
+  await sp.getByRole("button", { name: "Change date", exact: true }).click();
+  await expect(sp.getByText("Your test date has been changed.")).toBeVisible();
+
+  // Staff confirm it, then the student asks for another move.
+  await adminLogin(page);
+  await page.goto(`/portal/manage/bookings?q=${reference}`);
+  await page.getByRole("link", { name: reference }).first().click();
+  await page.getByRole("button", { name: /^Confirm booking/ }).click();
+  await expect(page.getByText("Confirmed").first()).toBeVisible();
+
+  await sp.reload();
+  await sp.getByLabel("New date").selectOption({ index: 1 });
+  await sp.getByRole("button", { name: "Request date change" }).click();
+  await expect(sp.getByText(/Waiting for approval/)).toBeVisible();
+
+  await page.reload();
+  await page.getByRole("button", { name: "Approve date change" }).click();
+  await expect(page.getByRole("button", { name: "Approve date change" })).toHaveCount(0);
+  await sp.reload();
+  await expect(sp.getByText(/Waiting for approval/)).toHaveCount(0);
+  await sctx.close();
 });

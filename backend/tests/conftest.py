@@ -24,8 +24,33 @@ def user(db):
     )
 
 
+JPEG_BYTES = bytes([0xFF, 0xD8, 0xFF, 0xE0])
+
+
+class PassportClient(APIClient):
+    """Booking requests need a passport photo. This client adds a small valid one unless the test sends its own."""
+
+    def post(self, path, data=None, format=None, **extra):
+        if path == "/api/v1/bookings/" and isinstance(data, dict) and "passport" not in data:
+            from django.core.files.uploadedfile import SimpleUploadedFile
+
+            data = {
+                **{k: v for k, v in data.items() if v is not None},
+                "passport": SimpleUploadedFile("p.jpg", JPEG_BYTES + b"0" * 40, "image/jpeg"),
+            }
+            format = "multipart"
+        return super().post(path, data, format=format, **extra)
+
+
 @pytest.fixture
 def auth_api(user):
+    c = PassportClient()
+    c.force_login(user)
+    return c
+
+
+@pytest.fixture
+def no_passport_api(user):
     c = APIClient()
     c.force_login(user)
     return c

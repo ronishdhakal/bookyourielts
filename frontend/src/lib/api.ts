@@ -126,6 +126,8 @@ export const bookingApi = {
   mine: () => api<Booking[]>("/bookings/"),
   get: (id: number | string) => api<Booking>(`/bookings/${id}/`),
   cancel: (id: number) => api<Booking>(`/bookings/${id}/cancel/`, { method: "POST" }),
+  changeDate: (id: number, session: number) =>
+    api<Booking>(`/bookings/${id}/change-date/`, { method: "POST", body: { session } }),
   documents: (id: number, form: FormData) =>
     api<Booking>(`/bookings/${id}/documents/`, { method: "POST", form }),
   requestChange: (id: number, message: string) =>
@@ -205,6 +207,8 @@ export const manageApi = {
       method: "POST",
       body: { ids, action },
     }),
+  messageBooking: (id: number, message: string) =>
+    api<StaffBooking>(`/manage/bookings/${id}/message/`, { method: "POST", body: { message } }),
   bulkBookings: (ids: number[]) =>
     api<{ deleted: number }>("/manage/bookings/bulk/", {
       method: "POST",

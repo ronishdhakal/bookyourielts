@@ -34,7 +34,7 @@ def staff(django_user_model):
         "inquiries/",
         "sessions/",
         "sessions/1/",
-        "bookings/1/passport/front/",
+        "bookings/1/passport/",
     ],
 )
 def test_only_staff_can_use_the_manage_api(api, auth_api, staff, path):
@@ -113,16 +113,15 @@ def test_passport_download_is_staff_only(staff, auth_api, make_session, settings
         "/api/v1/bookings/",
         {
             "session": s.pk,
-            "passport_front": SimpleUploadedFile("a.jpg", b"\xff\xd8\xff\xe0" + b"0" * 40, "image/jpeg"),
+            "passport": SimpleUploadedFile("a.jpg", b"\xff\xd8\xff\xe0" + b"0" * 40, "image/jpeg"),
         },
         format="multipart",
     )
     b = BookingRequest.objects.get()
     detail = staff.get(f"{M}bookings/{b.pk}/").data
-    assert detail["has_passport_front"] is True and detail["has_passport_back"] is False
-    assert staff.get(f"{M}bookings/{b.pk}/passport/front/").status_code == 200
-    assert staff.get(f"{M}bookings/{b.pk}/passport/back/").status_code == 404
-    assert auth_api.get(f"{M}bookings/{b.pk}/passport/front/").status_code == 403
+    assert detail["has_passport"] is True
+    assert staff.get(f"{M}bookings/{b.pk}/passport/").status_code == 200
+    assert auth_api.get(f"{M}bookings/{b.pk}/passport/").status_code == 403
 
 
 def test_inquiries_list_and_update(staff):

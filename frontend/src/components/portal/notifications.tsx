@@ -12,6 +12,8 @@ const LABEL: Record<PortalNotification["kind"], string> = {
   cancelled: "Cancelled",
   assigned: "Session and venue",
   change_resolved: "Change handled",
+  remark: "Message from our team",
+  date_changed: "Date changed",
 };
 
 export function Notifications() {

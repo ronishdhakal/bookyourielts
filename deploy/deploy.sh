@@ -7,7 +7,11 @@ cd "$(dirname "$0")/.."
 STATE=/etc/nginx/byi-active-color
 UPSTREAMS=/etc/nginx/byi-upstreams.conf
 CURRENT=$(cat "$STATE" 2>/dev/null || echo green)
-if [ "$CURRENT" = "blue" ]; then NEXT=green; BP=8002; FP=3002; else NEXT=blue; BP=8001; FP=3001; fi
+# Host ports are bound to 127.0.0.1 only. They were picked to avoid the other apps on this server
+# (which use 3002, 3003, 3101, 8000, 8011, 8031, 8056, 8090, 8443). Override in the environment if needed.
+BLUE_BP=${BYI_BLUE_BACKEND_PORT:-8071}; BLUE_FP=${BYI_BLUE_FRONTEND_PORT:-3071}
+GREEN_BP=${BYI_GREEN_BACKEND_PORT:-8072}; GREEN_FP=${BYI_GREEN_FRONTEND_PORT:-3072}
+if [ "$CURRENT" = "blue" ]; then NEXT=green; BP=$GREEN_BP; FP=$GREEN_FP; else NEXT=blue; BP=$BLUE_BP; FP=$BLUE_FP; fi
 set -a; . ./.env; set +a
 COMPOSE="docker compose --env-file .env -f deploy/docker-compose.prod.yml"
 
@@ -40,6 +44,6 @@ sudo nginx -t && sudo nginx -s reload
 echo "$NEXT" | sudo tee "$STATE" >/dev/null
 
 echo "==> Stopping $CURRENT"
-if [ "$CURRENT" = "blue" ]; then OBP=8001; OFP=3001; else OBP=8002; OFP=3002; fi
+if [ "$CURRENT" = "blue" ]; then OBP=$BLUE_BP; OFP=$BLUE_FP; else OBP=$GREEN_BP; OFP=$GREEN_FP; fi
 BACKEND_PORT=$OBP FRONTEND_PORT=$OFP $COMPOSE -p "byi-$CURRENT" down 2>/dev/null || true
 echo "Done. $NEXT is live."

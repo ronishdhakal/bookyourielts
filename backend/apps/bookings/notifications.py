@@ -88,6 +88,21 @@ def session_assigned(b: BookingRequest) -> None:
     )
 
 
+def remark(b: BookingRequest, message: str) -> Notification:
+    """A free-text message from staff, shown in the student's portal and emailed."""
+    return notify(b, Kind.REMARK, f"Message from our team about {b.reference}", message.strip())
+
+
+def date_changed(b: BookingRequest, old_label: str) -> None:
+    notify(
+        b,
+        Kind.DATE_CHANGED,
+        f"Your test date for {b.reference} changed",
+        f"Your booking {b.reference} moved from {old_label} to {_ref_line(b)}. "
+        "Session time and venue will be assigned again for the new date.",
+    )
+
+
 def change_resolved(b: BookingRequest) -> None:
     notify(
         b,

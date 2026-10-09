@@ -278,6 +278,9 @@ export function BookingAdminDetail({ id }: { id: string }) {
   const [saved, setSaved] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [remark, setRemark] = useState("");
+  const [remarkBusy, setRemarkBusy] = useState(false);
+  const [remarkErr, setRemarkErr] = useState<string | null>(null);
   const router = useRouter();
   const [slot, setSlot] = useState<string | null>(null);
   const [venueText, setVenueText] = useState<string | null>(null);
@@ -287,10 +290,24 @@ export function BookingAdminDetail({ id }: { id: string }) {
   if (!b) return <SkeletonRows rows={5} />;
   const s = b.session;
 
+  async function sendRemark() {
+    if (!b) return;
+    setRemarkBusy(true);
+    setRemarkErr(null);
+    try {
+      setOverride(await manageApi.messageBooking(b.id, remark));
+      setRemark("");
+    } catch (e) {
+      setRemarkErr(e instanceof ApiError ? e.message : "Could not send the message.");
+    }
+    setRemarkBusy(false);
+  }
+
   async function apply(body: {
     status?: BookingStatus;
     admin_notes?: string;
     resolve_change?: boolean;
+    approve_date_change?: boolean;
     assigned_slot?: "" | "morning" | "afternoon";
     assigned_venue?: string;
   }) {
@@ -370,29 +387,15 @@ export function BookingAdminDetail({ id }: { id: string }) {
               <Detail
                 k="Passport"
                 v={
-                  b.has_passport_front || b.has_passport_back ? (
-                    <span className="flex gap-4">
-                      {b.has_passport_front && (
-                        <a
-                          className="text-crimson underline"
-                          target="_blank"
-                          rel="noopener"
-                          href={`/api/v1/manage/bookings/${b.id}/passport/front/`}
-                        >
-                          Front
-                        </a>
-                      )}
-                      {b.has_passport_back && (
-                        <a
-                          className="text-crimson underline"
-                          target="_blank"
-                          rel="noopener"
-                          href={`/api/v1/manage/bookings/${b.id}/passport/back/`}
-                        >
-                          Back
-                        </a>
-                      )}
-                    </span>
+                  b.has_passport ? (
+                    <a
+                      className="text-crimson underline"
+                      target="_blank"
+                      rel="noopener"
+                      href={`/api/v1/manage/bookings/${b.id}/passport/`}
+                    >
+                      View passport photo
+                    </a>
                   ) : (
                     "Not uploaded"
                   )
@@ -492,13 +495,74 @@ export function BookingAdminDetail({ id }: { id: string }) {
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                Message candidate
+                Message on WhatsApp
               </a>
             </div>
             {error && (
               <p role="alert" className="field-error">
                 {error}
               </p>
+            )}
+          </section>
+
+          <section className="panel panel-pad" aria-labelledby="remark-h">
+            <h2 id="remark-h" className="text-lg font-bold">
+              Message the student
+            </h2>
+            <p className="text-muted mt-1 text-[0.8125rem]">
+              Shows in their portal and goes to their email. For a chat, use WhatsApp above.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {[
+                "Please upload a clear photo of the passport page.",
+                "Your payment has been received. We are confirming your seat.",
+                "Please contact us on WhatsApp so we can finish your booking.",
+              ].map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  className="border-mist hover:border-ink rounded-md border bg-white px-2.5 py-1.5 text-left text-[0.8125rem]"
+                  onClick={() => setRemark(t)}
+                >
+                  {t.split(".")[0]}
+                </button>
+              ))}
+            </div>
+            <label htmlFor="remark-text" className="field-label mt-3">
+              Message
+            </label>
+            <textarea
+              id="remark-text"
+              rows={4}
+              maxLength={1000}
+              className="field-input py-3"
+              value={remark}
+              onChange={(e) => setRemark(e.target.value)}
+            />
+            {remarkErr && (
+              <p role="alert" className="field-error">
+                {remarkErr}
+              </p>
+            )}
+            <button
+              type="button"
+              className="btn btn-dark btn-sm mt-3"
+              disabled={remarkBusy || remark.trim().length < 2}
+              onClick={() => void sendRemark()}
+            >
+              {remarkBusy ? "Sending…" : "Send to student"}
+            </button>
+            {b.remarks.length > 0 && (
+              <ul className="divide-mist mt-4 divide-y border-t border-[var(--color-mist)] text-[0.875rem]">
+                {b.remarks.map((r) => (
+                  <li key={r.id} className="py-2.5">
+                    <p className="whitespace-pre-wrap">{r.body}</p>
+                    <p className="text-muted mt-0.5 text-[0.8125rem]">
+                      {relativeTime(r.created_at)} · {r.is_read ? "Seen" : "Not seen yet"}
+                    </p>
+                  </li>
+                ))}
+              </ul>
             )}
           </section>
 
@@ -559,6 +623,26 @@ export function BookingAdminDetail({ id }: { id: string }) {
               <p className="text-muted mt-2 text-[0.8125rem]">
                 Asked {relativeTime(b.change_requested_at)}
               </p>
+              {b.change_open && b.requested_session && (
+                <div className="border-crimson mt-3 rounded-lg border-2 p-3 text-[0.9375rem]">
+                  <p className="font-semibold">
+                    Wants to move to {formatDate(b.requested_session.date, { weekday: "short" })} in{" "}
+                    {b.requested_session.city.name}
+                  </p>
+                  <p className="text-muted text-[0.8125rem]">
+                    {b.requested_session.seats_left} seats left. Approving moves the seat and clears
+                    the session and venue.
+                  </p>
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm mt-2"
+                    disabled={busy}
+                    onClick={() => void apply({ approve_date_change: true })}
+                  >
+                    Approve date change
+                  </button>
+                </div>
+              )}
               {b.change_open ? (
                 <button
                   type="button"
@@ -566,7 +650,7 @@ export function BookingAdminDetail({ id }: { id: string }) {
                   disabled={busy}
                   onClick={() => void apply({ resolve_change: true })}
                 >
-                  Mark as resolved
+                  {b.requested_session ? "Decline and close" : "Mark as resolved"}
                 </button>
               ) : (
                 <p className="mt-3 font-semibold">Resolved</p>

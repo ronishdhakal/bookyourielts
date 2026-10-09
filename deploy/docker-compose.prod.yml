@@ -1,5 +1,5 @@
 # One colour of the app (blue or green). Started by deploy/deploy.sh, e.g.:
-#   BACKEND_PORT=8001 FRONTEND_PORT=3001 docker compose -p byi-blue --env-file .env -f deploy/docker-compose.prod.yml up -d --build
+#   BACKEND_PORT=8071 FRONTEND_PORT=3071 docker compose -p byi-blue --env-file .env -f deploy/docker-compose.prod.yml up -d --build
 services:
   backend:
     build: ../backend

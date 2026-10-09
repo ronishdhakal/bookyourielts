@@ -36,8 +36,7 @@ class Candidate(models.Model):
     province = models.CharField(max_length=40, blank=True)
     district = models.CharField(max_length=40, blank=True)
     municipality = models.CharField(max_length=80, blank=True)
-    passport_front = models.FileField(upload_to=passport_upload_path, blank=True)
-    passport_back = models.FileField(upload_to=passport_upload_path, blank=True)
+    passport = models.FileField(upload_to=passport_upload_path, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -68,8 +67,7 @@ class BookingRequest(models.Model):
     province = models.CharField(max_length=40, blank=True)
     district = models.CharField(max_length=40, blank=True)
     municipality = models.CharField(max_length=80, blank=True, verbose_name="city / municipality")
-    passport_front = models.FileField(upload_to=passport_upload_path, blank=True)
-    passport_back = models.FileField(upload_to=passport_upload_path, blank=True)
+    passport = models.FileField(upload_to=passport_upload_path, blank=True)
 
     # Set by the team after booking. The date only fixes the city; session and venue are assigned later.
     assigned_slot = models.CharField(max_length=10, choices=SessionSlot.choices, blank=True)
@@ -84,6 +82,10 @@ class BookingRequest(models.Model):
     change_request = models.TextField(blank=True)
     change_requested_at = models.DateTimeField(null=True, blank=True)
     change_resolved_at = models.DateTimeField(null=True, blank=True)
+    # A confirmed booking is only moved to another date after staff approve it.
+    requested_session = models.ForeignKey(
+        TestSession, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
 
     admin_notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -178,6 +180,8 @@ class Notification(models.Model):
         CANCELLED = "cancelled", "Request cancelled"
         ASSIGNED = "assigned", "Session and venue assigned"
         CHANGE_RESOLVED = "change_resolved", "Change request handled"
+        REMARK = "remark", "Message from our team"
+        DATE_CHANGED = "date_changed", "Test date changed"
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="notifications")
     kind = models.CharField(max_length=20, choices=Kind.choices)

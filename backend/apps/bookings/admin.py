@@ -2,7 +2,7 @@ from django.contrib import admin, messages
 from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404
 from django.urls import path, reverse
-from django.utils.html import format_html, format_html_join
+from django.utils.html import format_html
 from unfold.admin import ModelAdmin
 from unfold.decorators import display
 
@@ -74,19 +74,19 @@ class BookingRequestAdmin(ModelAdmin):
     def get_urls(self):
         custom = [
             path(
-                "<int:pk>/passport/<str:side>/",
+                "<int:pk>/passport/",
                 self.admin_site.admin_view(self.passport_view),
                 name="bookings_bookingrequest_passport",
             )
         ]
         return custom + super().get_urls()
 
-    def passport_view(self, request, pk: int, side: str):
+    def passport_view(self, request, pk: int):
         """Passports are private: only staff who may view bookings can open them, never a public URL."""
         booking = get_object_or_404(BookingRequest, pk=pk)
-        if not self.has_view_permission(request, booking) or side not in ("front", "back"):
+        if not self.has_view_permission(request, booking):
             raise Http404
-        f = booking.passport_front if side == "front" else booking.passport_back
+        f = booking.passport
         if not f:
             raise Http404
         response = FileResponse(f.open("rb"))
@@ -95,21 +95,12 @@ class BookingRequestAdmin(ModelAdmin):
 
     @display(description="Passport")
     def passport_links(self, obj):
-        if not obj.pk or not obj.passport_front:
+        if not obj.pk or not obj.passport:
             return "Not uploaded"
-        links = [
-            format_html(
-                '<a href="{}" target="_blank" rel="noopener">{}</a>',
-                reverse("admin:bookings_bookingrequest_passport", args=[obj.pk, side]),
-                label,
-            )
-            for side, label, f in (
-                ("front", "Front", obj.passport_front),
-                ("back", "Back", obj.passport_back),
-            )
-            if f
-        ]
-        return format_html_join(" · ", "{}", ((link,) for link in links))
+        return format_html(
+            '<a href="{}" target="_blank" rel="noopener">View passport</a>',
+            reverse("admin:bookings_bookingrequest_passport", args=[obj.pk]),
+        )
 
     def get_readonly_fields(self, request, obj=None):
         base = list(super().get_readonly_fields(request, obj))

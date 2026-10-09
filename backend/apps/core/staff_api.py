@@ -128,10 +128,11 @@ class StaffBookingSerializer(serializers.ModelSerializer):
     user = _UserBrief(read_only=True)
     session = SessionSerializer(read_only=True)
     status_label = serializers.CharField(source="get_status_display", read_only=True)
-    has_passport_front = serializers.SerializerMethodField()
-    has_passport_back = serializers.SerializerMethodField()
+    has_passport = serializers.SerializerMethodField()
     whatsapp_url = serializers.SerializerMethodField()
     change_open = serializers.BooleanField(read_only=True)
+    remarks = serializers.SerializerMethodField()
+    requested_session = SessionSerializer(read_only=True)
 
     class Meta:
         model = BookingRequest
@@ -152,8 +153,7 @@ class StaffBookingSerializer(serializers.ModelSerializer):
             "province",
             "district",
             "municipality",
-            "has_passport_front",
-            "has_passport_back",
+            "has_passport",
             "admin_notes",
             "whatsapp_url",
             "change_request",
@@ -162,16 +162,22 @@ class StaffBookingSerializer(serializers.ModelSerializer):
             "assigned_slot",
             "assigned_venue",
             "assigned_at",
+            "remarks",
+            "requested_session",
         ]
         read_only_fields = [
             f for f in fields if f not in ("status", "admin_notes", "assigned_slot", "assigned_venue")
         ]
 
-    def get_has_passport_front(self, obj) -> bool:
-        return bool(obj.passport_front)
+    def get_remarks(self, obj) -> list:
+        notes = obj.notifications.filter(kind="remark").order_by("-created_at")[:20]
+        return [
+            {"id": n.id, "body": n.body, "created_at": n.created_at, "is_read": n.read_at is not None}
+            for n in notes
+        ]
 
-    def get_has_passport_back(self, obj) -> bool:
-        return bool(obj.passport_back)
+    def get_has_passport(self, obj) -> bool:
+        return bool(obj.passport)
 
     def get_whatsapp_url(self, obj) -> str:
         phone = (obj.candidate_phone or obj.user.phone).lstrip("+")
@@ -238,7 +244,22 @@ class StaffBookingDetail(StaffView, generics.RetrieveUpdateAPIView):
             booking.save(update_fields=["assigned_slot", "assigned_venue", "assigned_at", "updated_at"])
             if booking.assigned_at and (slot, booking.assigned_venue) != previous:
                 notifications.session_assigned(booking)
+        if request.data.get("approve_date_change"):
+            if booking.requested_session_id is None:
+                return Response(
+                    {"detail": "There is no date change to approve."}, status=status.HTTP_400_BAD_REQUEST
+                )
+            try:
+                services.move_booking(booking.pk, booking.requested_session_id)
+            except services.BookingError as e:
+                return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            booking.refresh_from_db()
+            booking.change_resolved_at = timezone.now()
+            booking.save(update_fields=["change_resolved_at", "updated_at"])
         if request.data.get("resolve_change"):
+            if booking.requested_session_id:
+                booking.requested_session = None
+                booking.save(update_fields=["requested_session", "updated_at"])
             booking.change_resolved_at = timezone.now()
             booking.save(update_fields=["change_resolved_at", "updated_at"])
             notifications.change_resolved(booking)
@@ -253,12 +274,28 @@ class StaffBookingDetail(StaffView, generics.RetrieveUpdateAPIView):
         return Response(StaffBookingSerializer(self.get_queryset().get(pk=booking.pk)).data)
 
 
+class StaffBookingMessageView(StaffView, APIView):
+    """Send a remark to the student. It appears in their portal and goes out by email."""
+
+    def post(self, request, pk: int):
+        booking = get_object_or_404(_bookings_qs(), pk=pk)
+        message = str(request.data.get("message", "")).strip()
+        if len(message) < 2:
+            return Response(
+                {"message": ["Write a message for the student."]}, status=status.HTTP_400_BAD_REQUEST
+            )
+        if len(message) > 1000:
+            return Response(
+                {"message": ["Keep it under 1000 characters."]}, status=status.HTTP_400_BAD_REQUEST
+            )
+        notifications.remark(booking, message)
+        return Response(StaffBookingSerializer(_bookings_qs().get(pk=booking.pk)).data)
+
+
 class StaffPassportView(StaffView, APIView):
-    def get(self, request, pk: int, side: str):
+    def get(self, request, pk: int):
         booking = get_object_or_404(BookingRequest, pk=pk)
-        if side not in ("front", "back"):
-            raise Http404
-        f = booking.passport_front if side == "front" else booking.passport_back
+        f = booking.passport
         if not f:
             raise Http404
         response = FileResponse(f.open("rb"))
@@ -466,9 +503,8 @@ class BulkBookingsView(StaffView, APIView):
             with transaction.atomic():
                 if booking.status == BookingStatus.CONFIRMED:
                     services.set_booking_status(booking.pk, BookingStatus.CANCELLED, notify=False)
-                for f in (booking.passport_front, booking.passport_back):
-                    if f:
-                        f.delete(save=False)
+                if booking.passport:
+                    booking.passport.delete(save=False)
                 booking.delete()
                 deleted += 1
         return Response({"deleted": deleted})

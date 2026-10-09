@@ -2,9 +2,9 @@
 
 import { ProviderLogo } from "../provider-logo";
 import Link from "next/link";
-import { useMemo, useState } from "react";
-import { ApiError, bookingApi } from "@/lib/api";
-import { formatDate, formatLong, formatNpr } from "@/lib/format";
+import { useEffect, useMemo, useState } from "react";
+import { ApiError, bookingApi, catalogApi } from "@/lib/api";
+import { formatDate, formatLong, formatNpr, timeAgo } from "@/lib/format";
 import { portalHref, siteHref } from "@/lib/portal";
 import type { Booking } from "@/lib/types";
 import { useLoader } from "@/lib/use-loader";
@@ -295,17 +295,23 @@ function Checklist({ id }: { id: number }) {
 }
 
 export function BookingDetail({ id }: { id: string }) {
-  const { reload } = usePortalData();
+  const { reload, notifications, markRead } = usePortalData();
   const load = useLoader(`booking|${id}`, () => bookingApi.get(id));
   const [override, setOverride] = useState<Booking | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [askCancel, setAskCancel] = useState(false);
   const [msg, setMsg] = useState("");
-  const [front, setFront] = useState<File | null>(null);
-  const [back, setBack] = useState<File | null>(null);
+  const [passport, setPassport] = useState<File | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const b = override ?? load.data;
+  const remarks = notifications.filter((n) => n.kind === "remark" && String(n.booking_id) === id);
+  const unreadRemarks = remarks.filter((n) => !n.is_read).map((n) => n.id);
+  const unreadKey = unreadRemarks.join(",");
+  useEffect(() => {
+    // Opening the booking counts as reading the messages on it.
+    if (unreadKey) void markRead({ ids: unreadKey.split(",").map(Number) });
+  }, [unreadKey, markRead]);
 
   if (load.error)
     return (
@@ -523,34 +529,51 @@ export function BookingDetail({ id }: { id: string }) {
         </div>
 
         <aside className="space-y-6">
+          {remarks.length > 0 && (
+            <section className="panel panel-pad !p-5 print:hidden" aria-labelledby="remarks-h">
+              <h2 id="remarks-h" className="text-lg font-bold">
+                Messages from our team
+              </h2>
+              <ul className="divide-mist mt-2 divide-y">
+                {remarks.map((n) => (
+                  <li key={n.id} className="py-3">
+                    <p className="whitespace-pre-wrap">{n.body}</p>
+                    <p className="text-muted mt-1 text-[0.8125rem]">{timeAgo(n.created_at)}</p>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
           {live && (
             <section className="panel panel-pad !p-5 print:hidden" aria-labelledby="docs-h">
               <h2 id="docs-h" className="text-lg font-bold">
                 Passport
               </h2>
               <p className="text-muted mt-1 mb-3 text-[0.875rem]">
-                Front: {b.has_passport ? "uploaded" : "missing"} · Back:{" "}
-                {b.has_passport_back ? "uploaded" : "missing"}. Stored privately.
+                {b.has_passport ? "Uploaded" : "Missing"}. Stored privately. Upload a new photo to
+                replace it.
               </p>
               <div className="space-y-3">
-                <FileDrop id="doc-front" label="Passport front" file={front} onChange={setFront} />
-                <FileDrop id="doc-back" label="Passport back" file={back} onChange={setBack} />
+                <FileDrop
+                  id="doc-passport"
+                  label="Passport photo"
+                  file={passport}
+                  onChange={setPassport}
+                />
               </div>
               <button
                 type="button"
                 className="btn btn-dark btn-sm mt-3"
-                disabled={busy || (!front && !back)}
+                disabled={busy || !passport}
                 onClick={() => {
                   const form = new FormData();
-                  if (front) form.set("passport_front", front);
-                  if (back) form.set("passport_back", back);
+                  if (passport) form.set("passport", passport);
                   void run(
                     () => bookingApi.documents(b.id, form),
                     "Passport uploaded.",
                     (r) => {
                       setOverride(r);
-                      setFront(null);
-                      setBack(null);
+                      setPassport(null);
                     },
                   );
                 }}
@@ -558,6 +581,17 @@ export function BookingDetail({ id }: { id: string }) {
                 Upload
               </button>
             </section>
+          )}
+
+          {live && (
+            <ChangeDate
+              booking={b}
+              onDone={(r, text) => {
+                setOverride(r);
+                setNotice(text);
+                reload();
+              }}
+            />
           )}
 
           {live && (
@@ -620,5 +654,103 @@ export function BookingDetail({ id }: { id: string }) {
         </aside>
       </div>
     </>
+  );
+}
+
+/** Pick another open date for the same exam. Not yet confirmed: it moves at once. Confirmed: staff approve it. */
+function ChangeDate({
+  booking,
+  onDone,
+}: {
+  booking: Booking;
+  onDone: (b: Booking, text: string) => void;
+}) {
+  const [choice, setChoice] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const confirmed = booking.status === "confirmed";
+  const pending = booking.requested_session;
+  const list = useLoader(`move|${booking.id}|${booking.session.id}`, () =>
+    catalogApi.sessions({
+      test_type: booking.session.test_type.code,
+      hide_closed: "true",
+      page_size: "60",
+    }),
+  );
+  const options = (list.data?.results ?? []).filter(
+    (s) => s.id !== booking.session.id && s.is_bookable,
+  );
+
+  async function submit() {
+    setBusy(true);
+    setError(null);
+    try {
+      const r = await bookingApi.changeDate(booking.id, Number(choice));
+      setChoice("");
+      onDone(
+        r,
+        confirmed
+          ? "Date change requested. Our team will approve it."
+          : "Your test date has been changed.",
+      );
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : "Could not change the date.");
+    }
+    setBusy(false);
+  }
+
+  return (
+    <section className="panel panel-pad !p-5 print:hidden" aria-labelledby="mv-h">
+      <h2 id="mv-h" className="text-lg font-bold">
+        Change test date
+      </h2>
+      {pending && (
+        <p className="mt-2 rounded-lg bg-[#f7f8fa] p-3 text-[0.875rem]">
+          <span className="font-semibold">Waiting for approval:</span> {formatDate(pending.date)} in{" "}
+          {pending.city.name}. Your current date stays until our team approves.
+        </p>
+      )}
+      <p className="text-muted mt-1 text-[0.875rem]">
+        {confirmed
+          ? "Your seat is confirmed, so our team approves a move before it happens."
+          : "Your request is not confirmed yet, so the new date takes effect immediately."}
+      </p>
+      <label htmlFor="mv-date" className="field-label mt-3">
+        New date
+      </label>
+      <select
+        id="mv-date"
+        className="field-input"
+        value={choice}
+        onChange={(e) => setChoice(e.target.value)}
+        disabled={list.loading || options.length === 0}
+      >
+        <option value="">
+          {list.loading
+            ? "Loading dates…"
+            : options.length
+              ? "Choose a date"
+              : "No other open dates"}
+        </option>
+        {options.map((s) => (
+          <option key={s.id} value={s.id}>
+            {formatDate(s.date, { weekday: "short" })} · {s.city.name} · {s.seats_left} seats left
+          </option>
+        ))}
+      </select>
+      {error && (
+        <p role="alert" className="field-error">
+          {error}
+        </p>
+      )}
+      <button
+        type="button"
+        className="btn btn-outline btn-sm mt-3"
+        disabled={busy || !choice}
+        onClick={() => void submit()}
+      >
+        {confirmed ? "Request date change" : "Change date"}
+      </button>
+    </section>
   );
 }

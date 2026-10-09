@@ -79,6 +79,45 @@ def set_booking_status(booking_id: int, new_status: str, notify: bool = True) ->
     return booking
 
 
+def check_move_target(booking: BookingRequest, session: TestSession) -> None:
+    """Raise BookingError when this booking cannot be moved to `session`."""
+    if booking.status == BookingStatus.CANCELLED:
+        raise BookingError("This request was cancelled.")
+    if session.pk == booking.session_id:
+        raise BookingError("Choose a different date.")
+    if not session.is_visible or not session.is_registration_open():
+        raise BookingError("Registration for that date has closed.")
+    if session.seats_available <= 0:
+        raise BookingError("That date is full. Please choose another.")
+    if BookingRequest.objects.filter(user=booking.user, session=session, status__in=ACTIVE).exists():
+        raise BookingError("You already have a request for that date.")
+
+
+@transaction.atomic
+def move_booking(booking_id: int, new_session_id: int, notify: bool = True) -> BookingRequest:
+    """Move a booking to another date, keeping seat counts right. Session and venue are cleared."""
+    booking = BookingRequest.objects.select_for_update().get(pk=booking_id)
+    ids = sorted({booking.session_id, new_session_id})  # lock in a fixed order to avoid deadlocks
+    locked = {s.pk: s for s in TestSession.objects.select_for_update().filter(pk__in=ids)}
+    old, new = locked[booking.session_id], locked.get(new_session_id)
+    if new is None:
+        raise BookingError("That date is no longer available.")
+    check_move_target(booking, new)
+    if booking.status == BookingStatus.CONFIRMED:
+        new.seats_booked += 1
+        new.save(update_fields=["seats_booked", "updated_at"])
+        old.seats_booked = max(old.seats_booked - 1, 0)
+        old.save(update_fields=["seats_booked", "updated_at"])
+    old_label = f"{old.date:%d %b %Y} in {old.city.name}"
+    booking.session = new
+    booking.requested_session = None
+    booking.assigned_slot, booking.assigned_venue, booking.assigned_at = "", "", None
+    booking.save()
+    if notify:
+        notifications.date_changed(booking, old_label)
+    return booking
+
+
 def _fmt_date(d) -> str:
     return f"{d:%d %b %Y}"
 

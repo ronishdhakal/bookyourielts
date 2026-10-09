@@ -36,8 +36,8 @@ class BookingSerializer(serializers.ModelSerializer):
     status_label = serializers.CharField(source="get_status_display", read_only=True)
     whatsapp_url = serializers.SerializerMethodField()
     has_passport = serializers.SerializerMethodField()
-    has_passport_back = serializers.SerializerMethodField()
     change_open = serializers.BooleanField(read_only=True)
+    requested_session = SessionSerializer(read_only=True)
     assigned_slot_label = serializers.CharField(source="get_assigned_slot_display", read_only=True)
 
     class Meta:
@@ -59,7 +59,6 @@ class BookingSerializer(serializers.ModelSerializer):
             "district",
             "municipality",
             "has_passport",
-            "has_passport_back",
             "assigned_slot",
             "assigned_slot_label",
             "assigned_venue",
@@ -67,16 +66,14 @@ class BookingSerializer(serializers.ModelSerializer):
             "change_request",
             "change_requested_at",
             "change_open",
+            "requested_session",
         ]
 
     def get_whatsapp_url(self, obj) -> str:
         return services.booking_whatsapp_url(obj)
 
     def get_has_passport(self, obj) -> bool:
-        return bool(obj.passport_front)
-
-    def get_has_passport_back(self, obj) -> bool:
-        return bool(obj.passport_back)
+        return bool(obj.passport)
 
 
 class BookingCreateSerializer(serializers.Serializer):
@@ -95,10 +92,7 @@ class BookingCreateSerializer(serializers.Serializer):
     province = serializers.ChoiceField(choices=list(PROVINCES), required=False, allow_blank=True)
     district = serializers.CharField(max_length=40, required=False, allow_blank=True)
     municipality = serializers.CharField(max_length=80, required=False, allow_blank=True)
-    passport_front = serializers.FileField(
-        required=False, allow_null=True, validators=[_django_validator(validate_passport_file)]
-    )
-    passport_back = serializers.FileField(
+    passport = serializers.FileField(
         required=False, allow_null=True, validators=[_django_validator(validate_passport_file)]
     )
 
@@ -154,9 +148,8 @@ def _resolve_candidate(user, data: dict):
         for src, dst in CANDIDATE_TO_BOOKING.items():
             if not data.get(dst):
                 data[dst] = getattr(cand, src)
-        for field in ("passport_front", "passport_back"):
-            if not data.get(field) and getattr(cand, field):
-                data[field] = getattr(cand, field)
+        if not data.get("passport") and cand.passport:
+            data["passport"] = cand.passport
     elif save and data.get("candidate_name"):
         from django.db.models import Q
 
@@ -172,9 +165,8 @@ def _resolve_candidate(user, data: dict):
                     setattr(cand, src, data[dst])
             if relation:
                 cand.relation = relation
-            for field in ("passport_front", "passport_back"):
-                if data.get(field):
-                    setattr(cand, field, data[field])
+            if data.get("passport"):
+                cand.passport = data["passport"]
             cand.save()
     if cand is not None:
         data["candidate"] = cand
@@ -206,9 +198,12 @@ class BookingListCreateView(generics.ListCreateAPIView):
         saved = _resolve_candidate(request.user, data)
         if isinstance(saved, Response):
             return saved
-        for key in ("passport_front", "passport_back"):
-            if data.get(key) is None:
-                data.pop(key, None)
+        if data.get("passport") is None:
+            data.pop("passport", None)
+        if "passport" not in data:
+            return Response(
+                {"passport": ["Upload a photo of the passport page."]}, status=status.HTTP_400_BAD_REQUEST
+            )
         try:
             booking, created = services.create_booking(request.user, session_id, data)
         except services.BookingError as e:

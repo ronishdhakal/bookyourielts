@@ -206,3 +206,10 @@ Seat logic lives in `apps/bookings/services.py`, so a payment callback can call 
 
 ## Notifications and email
 Booking events (request received, confirmed, cancelled by staff, session and venue assigned, change request handled) create a **portal notification** (bell, Notifications page, dashboard banner) and send an **email** when `EMAIL_HOST` is set. Students can switch emails off in Profile; portal notifications always appear. Mail failures are logged and never block a booking. Set the `EMAIL_*` values in `backend/.env` (see `.env.example`) and check them with `python manage.py send_test_email you@example.com`. Without `EMAIL_HOST`, emails are printed to the server log.
+
+## Bookings: passport, messages and date changes
+- One **passport photo** is required to book (no front/back). Students can replace it later from the booking.
+- Booking flow: **Confirm booking** first, then an optional **Message us on WhatsApp** button for a quicker reply.
+- Staff can send a **remark** to a student from the booking page; it appears in the student's portal and by email.
+- Students can **change the date**. Not yet confirmed: it moves at once. Confirmed: staff approve it (Approve date change), and seats move with it.
+- Production deployment steps: see `DEPLOYMENT.txt`.

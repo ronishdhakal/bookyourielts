@@ -11,9 +11,10 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.accounts.serializers import PhoneField
-from apps.catalog.models import City, TestFormat, TestType
+from apps.catalog.models import City, TestFormat, TestSession, TestType
 from apps.core.nepal import PROVINCES
 
+from . import services
 from .alerts import alert_stats
 from .api import BookingSerializer, _django_validator
 from .models import BookingRequest, BookingStatus, Candidate, DateAlert, Notification
@@ -28,15 +29,8 @@ class CandidateSerializer(serializers.ModelSerializer):
     phone = PhoneField(required=False, allow_blank=True)
     date_of_birth = serializers.DateField(required=False, allow_null=True)
     province = serializers.ChoiceField(choices=list(PROVINCES), required=False, allow_blank=True)
-    has_passport_front = serializers.SerializerMethodField()
-    has_passport_back = serializers.SerializerMethodField()
-    passport_front = serializers.FileField(
-        write_only=True,
-        required=False,
-        allow_null=True,
-        validators=[_django_validator(validate_passport_file)],
-    )
-    passport_back = serializers.FileField(
+    has_passport = serializers.SerializerMethodField()
+    passport = serializers.FileField(
         write_only=True,
         required=False,
         allow_null=True,
@@ -55,19 +49,14 @@ class CandidateSerializer(serializers.ModelSerializer):
             "province",
             "district",
             "municipality",
-            "has_passport_front",
-            "has_passport_back",
-            "passport_front",
-            "passport_back",
+            "has_passport",
+            "passport",
             "created_at",
         ]
         read_only_fields = ["id", "created_at"]
 
-    def get_has_passport_front(self, obj) -> bool:
-        return bool(obj.passport_front)
-
-    def get_has_passport_back(self, obj) -> bool:
-        return bool(obj.passport_back)
+    def get_has_passport(self, obj) -> bool:
+        return bool(obj.passport)
 
     def validate_date_of_birth(self, value):
         try:
@@ -244,26 +233,51 @@ class BookingDocumentsView(APIView):
         booking = _my_booking(request, pk)
         if booking.status == BookingStatus.CANCELLED:
             return Response({"detail": "This request was cancelled."}, status=status.HTTP_400_BAD_REQUEST)
-        errors, changed = {}, []
-        for field in ("passport_front", "passport_back"):
-            f = request.FILES.get(field)
-            if not f:
-                continue
-            try:
-                validate_passport_file(f)
-            except DjangoValidationError as e:
-                errors[field] = e.messages
-                continue
-            setattr(booking, field, f)
-            changed.append(field)
-        if errors:
-            return Response(errors, status=status.HTTP_400_BAD_REQUEST)
-        if not changed:
+        f = request.FILES.get("passport")
+        if not f:
             return Response(
                 {"detail": "Choose a passport file to upload."}, status=status.HTTP_400_BAD_REQUEST
             )
-        booking.save(update_fields=[*changed, "updated_at"])
+        try:
+            validate_passport_file(f)
+        except DjangoValidationError as e:
+            return Response({"passport": e.messages}, status=status.HTTP_400_BAD_REQUEST)
+        booking.passport = f
+        booking.save(update_fields=["passport", "updated_at"])
         return Response(BookingSerializer(booking).data)
+
+
+class ChangeDateView(APIView):
+    """Move a booking to another date. A request not yet confirmed moves at once; a confirmed one
+    asks staff to approve the move, so a held seat is never lost by accident."""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(request=None, responses=BookingSerializer)
+    def post(self, request, pk: int):
+        booking = _my_booking(request, pk)
+        session_id = request.data.get("session")
+        if not isinstance(session_id, int):
+            return Response({"detail": "Choose a new date."}, status=status.HTTP_400_BAD_REQUEST)
+        target = TestSession.objects.select_related("city", "test_type").filter(pk=session_id).first()
+        if target is None:
+            return Response({"detail": "That date is not available."}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            services.check_move_target(booking, target)
+            if booking.status == BookingStatus.CONFIRMED:
+                booking.requested_session = target
+                booking.change_request = (
+                    f"Please move my booking to {target.date:%d %b %Y} in {target.city.name}."
+                )
+                booking.change_requested_at = timezone.now()
+                booking.save(
+                    update_fields=["requested_session", "change_request", "change_requested_at", "updated_at"]
+                )
+            else:
+                services.move_booking(booking.pk, target.pk)
+        except services.BookingError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(BookingSerializer(_my_booking(request, pk)).data)
 
 
 class ChangeRequestSerializer(serializers.Serializer):

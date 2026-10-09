@@ -75,7 +75,6 @@ function DrawerBody({ sessionId, onClose }: { sessionId: number; onClose: () => 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [booking, setBooking] = useState<Booking | null>(null);
-  const [blocked, setBlocked] = useState(false);
 
   if (!user) return null;
   const form = person ?? personFromUser(user);
@@ -97,7 +96,10 @@ function DrawerBody({ sessionId, onClose }: { sessionId: number; onClose: () => 
   }
 
   function review() {
-    const e = validatePerson(form);
+    const e = validatePerson(form, {
+      requirePassport: true,
+      savedPassport: typeof who === "number" && !!chosen?.has_passport,
+    });
     setErrors(e);
     setConfirmErr(confirmed ? null : "Please confirm that the details match the passport.");
     if (Object.keys(e).length || !confirmed) return;
@@ -112,9 +114,6 @@ function DrawerBody({ sessionId, onClose }: { sessionId: number; onClose: () => 
     }
     setError(null);
     setBusy(true);
-    // The tab is opened inside the click handler so phones do not block it; it is pointed at the chat afterwards.
-    const tab = window.open("", "_blank");
-    if (tab) tab.opener = null;
     try {
       const body = new FormData();
       body.set("session", String(session.id));
@@ -127,10 +126,7 @@ function DrawerBody({ sessionId, onClose }: { sessionId: number; onClose: () => 
       if (who === "self" && !user?.date_of_birth)
         authApi.updateMe({ date_of_birth: form.dob }).catch(() => undefined);
       reload();
-      if (tab) tab.location.href = b.whatsapp_url;
-      else setBlocked(true);
     } catch (e) {
-      tab?.close();
       if (e instanceof ApiError && Object.keys(e.fields).length && !e.fields.detail) {
         const first = Object.entries(e.fields)[0];
         setError(`${first?.[0].replace(/_/g, " ")}: ${first?.[1][0]}`);
@@ -145,7 +141,11 @@ function DrawerBody({ sessionId, onClose }: { sessionId: number; onClose: () => 
       <header className="border-mist flex items-start justify-between gap-4 border-b px-6 py-4">
         <div>
           <h2 id="drawer-title" className="text-xl font-bold">
-            {booking ? "Request sent" : step === "review" ? "Review and confirm" : "Book this date"}
+            {booking
+              ? "Booking confirmed"
+              : step === "review"
+                ? "Review and confirm"
+                : "Book this date"}
           </h2>
           <p className="text-muted text-[0.875rem]">
             {booking ? booking.reference : `Step ${step === "review" ? 2 : 1} of 2`}
@@ -170,7 +170,7 @@ function DrawerBody({ sessionId, onClose }: { sessionId: number; onClose: () => 
             <div className="skeleton-light h-64 rounded-lg" />
           </div>
         ) : booking ? (
-          <Done booking={booking} blocked={blocked} onClose={onClose} />
+          <Done booking={booking} onClose={onClose} />
         ) : (
           <>
             <SessionSummary s={session} />
@@ -224,11 +224,8 @@ function DrawerBody({ sessionId, onClose }: { sessionId: number; onClose: () => 
                     setErrors({});
                   }}
                   errors={errors}
-                  saved={
-                    chosen
-                      ? { front: chosen.has_passport_front, back: chosen.has_passport_back }
-                      : undefined
-                  }
+                  saved={chosen ? chosen.has_passport : undefined}
+                  passportRequired
                   idPrefix="bk"
                   showRelation={who === "new"}
                 />
@@ -308,7 +305,7 @@ function DrawerBody({ sessionId, onClose }: { sessionId: number; onClose: () => 
                 Back
               </button>
               <button type="button" className="btn btn-primary" onClick={submit} disabled={busy}>
-                {busy ? "Saving your request…" : "Confirm and continue on WhatsApp"}
+                {busy ? "Confirming…" : "Confirm booking"}
               </button>
             </>
           )}
@@ -427,10 +424,10 @@ function Review({
         )}
         {row(
           "Passport",
-          person.passportFront
+          person.passport
             ? "Attached"
             : typeof who === "number"
-              ? "Saved passport (if any)"
+              ? "Saved passport"
               : "Not attached",
         )}
       </dl>
@@ -439,11 +436,11 @@ function Review({
         <p className="font-semibold">What happens when you confirm</p>
         <ol className="text-muted mt-1 list-decimal space-y-1 pl-5 text-[0.9375rem]">
           <li>We save your booking request and give it a reference number.</li>
-          <li>You are taken to WhatsApp with a ready-to-send message for our team.</li>
           <li>
-            Our team confirms the seat in the chat and explains payment. Nothing is paid on this
-            website.
+            You can message our team on WhatsApp for a quicker response. Your details are filled in
+            for you.
           </li>
+          <li>Our team confirms the seat and explains payment. Nothing is paid on this website.</li>
         </ol>
       </div>
       <label className="mt-5 flex cursor-pointer items-start gap-3">
@@ -482,22 +479,14 @@ function Review({
   );
 }
 
-function Done({
-  booking,
-  blocked,
-  onClose,
-}: {
-  booking: Booking;
-  blocked: boolean;
-  onClose: () => void;
-}) {
+function Done({ booking, onClose }: { booking: Booking; onClose: () => void }) {
   return (
     <div role="status">
-      <p className="text-2xl font-bold">One last step: send the message to our team</p>
+      <p className="text-2xl font-bold">Your booking request is confirmed</p>
       <p className="text-muted mt-2">
-        {blocked
-          ? "Your browser did not open WhatsApp automatically. Tap the button to open it."
-          : "WhatsApp has opened in a new tab with your details ready to send. Press send there so our team can confirm your seat."}
+        Reference <strong className="text-ink font-mono">{booking.reference}</strong>. For a quicker
+        response, message our team on WhatsApp. Your details are filled in, so you only need to
+        press send.
       </p>
       <div className="mt-5 flex flex-col gap-3 sm:flex-row">
         <a
@@ -506,7 +495,7 @@ function Done({
           rel="noopener noreferrer"
           className="btn btn-primary"
         >
-          {blocked ? "Open WhatsApp" : "Continue on WhatsApp"}
+          Message us on WhatsApp
         </a>
         <Link
           href={portalHref(`/bookings/${booking.id}`)}
