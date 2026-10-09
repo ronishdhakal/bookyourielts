@@ -213,3 +213,5 @@ Booking events (request received, confirmed, cancelled by staff, session and ven
 - Staff can send a **remark** to a student from the booking page; it appears in the student's portal and by email.
 - Students can **change the date**. Not yet confirmed: it moves at once. Confirmed: staff approve it (Approve date change), and seats move with it.
 - Production deployment steps: see `DEPLOYMENT.txt`.
+#   b o o k y o u r i e l t s  
+ 
