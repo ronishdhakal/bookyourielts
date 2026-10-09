@@ -186,6 +186,24 @@ Everyday: deploying an update
       cat /etc/nginx/byi-active-color                 the colour that is live now
       (re-run the printf line from step 5 with the other colour's ports, nginx -t, reload)
 
+Automatic deploys from GitHub (optional)
+----------------------------------------
+  .github/workflows/ci.yml has a "deploy" job. On every push to main, once the backend, frontend
+  and browser tests pass, it connects to the server over SSH and runs:
+      cd /var/www/bookyourielts && git pull --ff-only && ./deploy/deploy.sh
+  Set it up once:
+    1. On your computer:  ssh-keygen -t ed25519 -f byi_actions -N ""
+       Put byi_actions.pub into  /root/.ssh/authorized_keys  on the server.
+    2. Get the server's host key line:  ssh-keyscan -t ed25519 <server ip>
+    3. GitHub > repo > Settings > Secrets and variables > Actions > New repository secret:
+         VPS_HOST       the server IP or hostname
+         VPS_USER       optional, defaults to root
+         VPS_SSH_KEY    the full contents of the private file byi_actions
+         VPS_HOST_KEY   the line printed in step 2
+    4. The server must be able to run "git pull" (the deploy key from step 1 above) and the
+       first deploy must already have been done by hand.
+  A failed deploy leaves the current version running, and the job turns red.
+
 Backups (do this before you rely on the site)
 ---------------------------------------------
   Database, nightly:
