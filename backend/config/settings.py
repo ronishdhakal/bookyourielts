@@ -8,6 +8,26 @@ import dj_database_url
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
+def _load_dotenv() -> None:
+    """Read KEY=value lines from backend/.env (then the repo root .env) without overriding real variables.
+
+    Handy for local development, so commands like createsuperuser work without exporting anything first.
+    Production passes real environment variables and has no .env file inside the image.
+    """
+    for path in (BASE_DIR / ".env", BASE_DIR.parent / ".env"):
+        if not path.is_file():
+            continue
+        for line in path.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, _, value = line.partition("=")
+            os.environ.setdefault(key.strip(), value.strip().strip("\"'"))
+
+
+_load_dotenv()
+
+
 def env(name: str, default: str = "") -> str:
     return os.environ.get(name, default)
 
