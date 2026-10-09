@@ -1,8 +1,12 @@
 import { expect, test, type Page } from "@playwright/test";
 
 const ADMIN = { email: "admin@example.com", password: "admin12345" }; // created by `seed_demo --admin` (dev only)
-
 const PASSWORD = "Str0ng-pass-123";
+const PNG = {
+  name: "front.png",
+  mimeType: "image/png",
+  buffer: Buffer.from("89504e470d0a1a0a00", "hex"),
+};
 
 function uniqueUser() {
   const id = `${Date.now()}${Math.floor(Math.random() * 1000)}`;
@@ -18,15 +22,45 @@ async function fillRegistration(page: Page, u: ReturnType<typeof uniqueUser>) {
   await page.getByRole("button", { name: "Create account" }).click();
 }
 
+async function register(page: Page, next = "/portal") {
+  await page.goto(`/register?next=${encodeURIComponent(next)}`);
+  const u = uniqueUser();
+  await fillRegistration(page, u);
+  return u;
+}
+
+/** Fill the candidate details in the booking drawer and tick the confirmation. */
 async function fillDetails(
   page: Page,
-  place: { province: string; district: string; city: string },
+  place: { province: string; district: string; city: string } = {
+    province: "Bagmati",
+    district: "Kathmandu",
+    city: "Thamel",
+  },
 ) {
-  await page.getByLabel(/City \/ municipality/).fill(place.city);
-  await page.getByLabel(/Province/).selectOption(place.province);
-  await page.getByLabel(/District/).selectOption(place.district);
-  await page.getByLabel(/Date of birth/).fill("2001-04-05");
-  await page.getByLabel(/I confirm these details/).check();
+  const drawer = page.getByRole("dialog");
+  await drawer.getByLabel(/City \/ municipality/).fill(place.city);
+  await drawer.getByLabel(/Province/).selectOption(place.province);
+  await drawer.getByLabel(/District/).selectOption(place.district);
+  await drawer.getByLabel(/Date of birth/).fill("2001-04-05");
+  await drawer.getByLabel(/I confirm these details/).check();
+}
+
+/** Review, agree and confirm. Returns the reference shown on the final screen. */
+async function confirmBooking(page: Page): Promise<string> {
+  const drawer = page.getByRole("dialog");
+  await drawer.getByRole("button", { name: "Review" }).click();
+  await expect(drawer.getByRole("heading", { name: "Review and confirm" })).toBeVisible();
+  await drawer.getByLabel(/I agree to the/).check();
+  const popup = page.context().waitForEvent("page");
+  await drawer.getByRole("button", { name: "Confirm and continue on WhatsApp" }).click();
+  const tab = await popup;
+  await tab.waitForURL(/wa\.me/);
+  const text = new URL(tab.url()).searchParams.get("text") ?? "";
+  await tab.close();
+  const ref = text.match(/BYI-\d{4}-\d{6}/)?.[0] ?? "";
+  expect(ref).not.toBe("");
+  return ref;
 }
 
 /** Open an admin section. On phones the navigation is behind a Menu button. */
@@ -36,6 +70,15 @@ async function adminNav(page: Page, name: RegExp | string) {
   await page.getByRole("navigation", { name: "Admin" }).getByRole("link", { name }).click();
 }
 
+async function adminLogin(page: Page) {
+  await page.goto("/login");
+  await page.waitForLoadState("networkidle");
+  await page.getByLabel("Email").fill(ADMIN.email);
+  await page.getByLabel("Password").fill(ADMIN.password);
+  await page.getByRole("button", { name: "Log in" }).click();
+  await expect(page).toHaveURL(/\/portal\/manage$/);
+}
+
 test.beforeEach(async ({ context }) => {
   // Never hit the real WhatsApp during tests.
   await context.route("https://wa.me/**", (route) =>
@@ -43,6 +86,7 @@ test.beforeEach(async ({ context }) => {
   );
 });
 
+/* ------------------------------------------------------------------ public site */
 test("home page leads with the booking, not with WhatsApp", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { level: 1 })).toContainText("IELTS test date in Nepal");
@@ -73,21 +117,21 @@ test("filter dates, log in, and book with WhatsApp only at the last step", async
   const u = uniqueUser();
   await fillRegistration(page, u);
 
-  // The chosen date skips straight to the candidate details.
-  await expect(page).toHaveURL(/\/portal\/book\?session=\d+/);
-  await expect(page.getByRole("heading", { name: "Candidate detail" })).toBeVisible();
-  await expect(page.locator("main")).not.toContainText(/whatsapp/i);
-  await expect(page.getByLabel("Full name *")).toHaveValue(u.name);
+  // The chosen date opens in the booking panel on the Find a date page.
+  await expect(page).toHaveURL(/\/portal\/dates\?session=\d+/);
+  const drawer = page.getByRole("dialog");
+  await expect(drawer.getByRole("heading", { name: "Book this date" })).toBeVisible();
+  await expect(drawer).toContainText("Pokhara");
+  await expect(drawer).not.toContainText(/whatsapp/i);
+  await expect(drawer.getByLabel("Full name *")).toHaveValue(u.name);
 
   await fillDetails(page, { province: "Gandaki", district: "Kaski", city: "Lakeside" });
-  await page.getByRole("button", { name: "Proceed" }).click();
-
+  await drawer.getByRole("button", { name: "Review" }).click();
   // Only now does the flow mention WhatsApp.
-  await expect(page.getByRole("heading", { name: "Review and confirm" })).toBeVisible();
-  await expect(page.getByText(/WhatsApp/).first()).toBeVisible();
-  await page.getByLabel(/I agree to the/).check();
+  await expect(drawer.getByText(/WhatsApp/).first()).toBeVisible();
+  await drawer.getByLabel(/I agree to the/).check();
   const popupPromise = page.context().waitForEvent("page");
-  await page.getByRole("button", { name: "Confirm and continue on WhatsApp" }).click();
+  await drawer.getByRole("button", { name: "Confirm and continue on WhatsApp" }).click();
   const popup = await popupPromise;
   await popup.waitForURL(/wa\.me/);
   const text = new URL(popup.url()).searchParams.get("text") ?? "";
@@ -95,62 +139,10 @@ test("filter dates, log in, and book with WhatsApp only at the last step", async
   expect(text).toContain("City: Pokhara");
   expect(text).toMatch(/Reference: BYI-\d{4}-\d{6}/);
 
-  await expect(page.getByText(/Booking request BYI-/)).toBeVisible();
-  await page.getByRole("link", { name: "View this request" }).click();
+  await expect(drawer.getByText(/BYI-\d{4}-\d{6}/).first()).toBeVisible();
+  await drawer.getByRole("link", { name: "View this request" }).click();
   await expect(page.getByText("Awaiting confirmation").first()).toBeVisible();
   await expect(page.getByText("Lakeside, Kaski, Gandaki")).toBeVisible();
-});
-
-test("the booking form walks through exam preference, candidate detail and review", async ({
-  page,
-}) => {
-  await page.goto("/register?next=%2Fportal%2Fbook");
-  await fillRegistration(page, uniqueUser());
-
-  // No provider yet: the provider dialog opens first.
-  await expect(page.getByRole("heading", { name: "Choose provider" })).toBeVisible();
-  await expect(page.locator("main")).not.toContainText(/whatsapp/i);
-  await page.getByRole("button", { name: /British Council IELTS/ }).click();
-
-  await expect(page.getByRole("heading", { name: "Exam preference", level: 2 })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Proceed" })).toBeDisabled();
-  await page.getByLabel("Type", { exact: true }).selectOption("academic");
-  await page.getByLabel("Format", { exact: true }).selectOption("computer");
-  await page.getByLabel("City", { exact: true }).selectOption("kathmandu");
-  await page.getByRole("button", { name: "Proceed" }).click();
-
-  await expect(page.getByRole("heading", { name: "Candidate detail" })).toBeVisible();
-  // Required fields are validated with specific messages.
-  await page.getByLabel(/Date of birth/).fill("");
-  await page.getByRole("button", { name: "Proceed" }).click();
-  await expect(page.getByText("Pick a test date.")).toBeVisible();
-  await expect(page.getByText("Enter the date of birth.")).toBeVisible();
-  await expect(page.getByText("Choose a province.")).toBeVisible();
-  await expect(page.getByText("Please confirm that the details match the passport.")).toBeVisible();
-
-  // The calendar highlights the days with seats.
-  await page.getByRole("button", { name: "Pick a date" }).click();
-  await page.locator('[role="dialog"] [role="gridcell"] button:not([disabled])').first().click();
-  const session = page.getByLabel("Session", { exact: true });
-  if (await session.isVisible()) await session.selectOption({ index: 1 });
-  await expect(page.getByText("Register by")).toBeVisible();
-
-  await fillDetails(page, { province: "Bagmati", district: "Kathmandu", city: "Thamel" });
-  await page
-    .locator('input[type="file"]')
-    .first()
-    .setInputFiles({
-      name: "front.png",
-      mimeType: "image/png",
-      buffer: Buffer.from("89504e470d0a1a0a00", "hex"),
-    });
-  await expect(page.getByText("front.png")).toBeVisible();
-  await page.getByRole("button", { name: "Proceed" }).click();
-
-  await expect(page.getByRole("heading", { name: "Review and confirm" })).toBeVisible();
-  await expect(page.getByText("Front attached")).toBeVisible();
-  await page.getByRole("button", { name: "Edit" }).first().click();
-  await expect(page.getByRole("heading", { name: "Exam preference", level: 2 })).toBeVisible();
 });
 
 test("no matching dates shows an empty state that leads to an inquiry", async ({ page }) => {
@@ -193,44 +185,27 @@ test("city page has its own heading and metadata", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "We could not find that page" })).toBeVisible();
 });
 
-test("the portal sends logged-out visitors to log in", async ({ page }) => {
-  await page.goto("/portal/bookings");
-  await expect(page).toHaveURL(/\/login\?next=/);
-});
-
 test("registration shows field errors", async ({ page }) => {
   await page.goto("/register");
   await page.getByRole("button", { name: "Create account" }).click();
   await expect(page.getByText("Use at least 8 characters.")).toBeVisible();
 });
 
-test("a student can withdraw an unconfirmed request", async ({ page }) => {
-  await page.goto("/ielts-test-dates?city=kathmandu");
-  await page
-    .getByRole("link", { name: /^Book this date/ })
-    .first()
-    .click();
-  await page.getByRole("link", { name: "Create a free account" }).click();
-  await fillRegistration(page, uniqueUser());
-  await fillDetails(page, { province: "Bagmati", district: "Kathmandu", city: "Thamel" });
-  await page.getByRole("button", { name: "Proceed" }).click();
-  await page.getByLabel(/I agree to the/).check();
-  const popup = page.context().waitForEvent("page");
-  await page.getByRole("button", { name: "Confirm and continue on WhatsApp" }).click();
-  await (await popup).close();
-  await page.getByRole("link", { name: "View this request" }).click();
-  await page.getByRole("button", { name: "Withdraw request" }).click();
-  await page.getByRole("button", { name: "Yes, withdraw" }).click();
-  await expect(page.getByText("Cancelled").first()).toBeVisible();
+/* ------------------------------------------------------------------ student portal */
+test("the portal sends logged-out visitors to log in", async ({ page }) => {
+  await page.goto("/portal/bookings");
+  await expect(page).toHaveURL(/\/login\?next=/);
 });
 
 test("a signed-in student skips the marketing home and lands on their dashboard", async ({
   page,
 }) => {
-  await page.goto("/register?next=%2Fportal");
-  await fillRegistration(page, uniqueUser());
+  await register(page);
   await expect(page).toHaveURL(/\/portal$/);
-  await expect(page.getByRole("heading", { name: /^Welcome, / })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1 })).toContainText(
+    /^Good (morning|afternoon|evening), /,
+  );
+  await expect(page.getByRole("heading", { name: "No test booked yet" })).toBeVisible();
 
   await page.goto("/");
   await expect(page).toHaveURL(/\/portal$/);
@@ -242,14 +217,137 @@ test("a signed-in student skips the marketing home and lands on their dashboard"
   await expect(page).toHaveURL(/\/portal$/);
 });
 
-test("staff sign in to the admin dashboard and manage dates and requests", async ({ page }) => {
-  await page.goto("/login");
-  await page.waitForLoadState("networkidle");
-  await page.getByLabel("Email").fill(ADMIN.email);
-  await page.getByLabel("Password").fill(ADMIN.password);
-  await page.getByRole("button", { name: "Log in" }).click();
+test("find a date: filters, list and month views, and the booking panel", async ({ page }) => {
+  await register(page, "/portal/dates");
+  await expect(page.getByRole("heading", { name: "Find a date", level: 1 })).toBeVisible();
+  await page.getByLabel("City", { exact: true }).selectOption("kathmandu");
+  await page.getByLabel("Test type").selectOption("academic");
+  await expect(page).toHaveURL(/city=kathmandu/);
+  await expect(page.getByRole("button", { name: /^Select/ }).first()).toBeVisible();
+  await expect(page.getByText(/seats left/).first()).toBeVisible();
 
-  await expect(page).toHaveURL(/\/portal\/manage$/);
+  // Month view: pick a day, then a session from the side panel.
+  await page.getByRole("tab", { name: "Month" }).click();
+  await expect(page.getByRole("grid")).toBeVisible();
+  await page.locator('[role="grid"] button:not([disabled])').first().click();
+  await page.getByRole("button", { name: "Select", exact: true }).first().click();
+  const drawer = page.getByRole("dialog");
+  await expect(drawer.getByRole("heading", { name: "Book this date" })).toBeVisible();
+  await expect(drawer).toContainText("Kathmandu");
+
+  // Validation inside the panel
+  await drawer.getByLabel(/Date of birth/).fill("");
+  await drawer.getByRole("button", { name: "Review" }).click();
+  await expect(drawer.getByText("Enter the date of birth.")).toBeVisible();
+  await expect(drawer.getByText("Choose a province.")).toBeVisible();
+  await expect(
+    drawer.getByText("Please confirm that the details match the passport."),
+  ).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(drawer).toBeHidden();
+});
+
+test("date alerts: save a search, see its matches, pause and delete it", async ({ page }) => {
+  await register(page, "/portal/dates?city=butwal");
+  await page.getByRole("button", { name: "Notify me about this search" }).click();
+  await expect(page.getByText(/Alert saved/)).toBeVisible();
+  await page.goto("/portal/alerts");
+  await expect(page.getByRole("heading", { name: "Date alerts", level: 1 })).toBeVisible();
+  await expect(page.getByRole("listitem").filter({ hasText: /Butwal/ })).toBeVisible();
+  await expect(page.getByText(/open dates?/).first()).toBeVisible();
+  await page.getByRole("button", { name: "Pause" }).click();
+  await expect(page.getByText("Paused")).toBeVisible();
+  await page.getByRole("button", { name: "Delete alert" }).click();
+  await expect(page.getByRole("heading", { name: "No alerts yet" })).toBeVisible();
+});
+
+test("saved candidates are created while booking and reused next time", async ({ page }) => {
+  await register(page, "/portal/dates?city=kathmandu");
+  await page
+    .getByRole("button", { name: /^Select/ })
+    .first()
+    .click();
+  const drawer = page.getByRole("dialog");
+  await drawer.getByText("Someone new").click();
+  await drawer.getByLabel("Full name *").fill("Maya Gurung");
+  await drawer.getByLabel("Mobile number *").fill("9801112233");
+  await drawer.getByLabel("Who is this?").fill("Daughter");
+  await fillDetails(page);
+  await expect(drawer.getByLabel(/Save to my candidates/)).toBeChecked();
+  await confirmBooking(page);
+
+  await page.goto("/portal/candidates");
+  await expect(page.getByText("Maya Gurung")).toBeVisible();
+  await expect(page.getByText(/Daughter/)).toBeVisible();
+
+  // Next booking: pick her in one tap and the details are filled in.
+  await page.goto("/portal/dates?city=kathmandu");
+  await page
+    .getByRole("button", { name: /^Select/ })
+    .nth(1)
+    .click();
+  await page.getByRole("dialog").getByText("Maya Gurung").click();
+  await expect(page.getByRole("dialog").getByLabel("Full name *")).toHaveValue("Maya Gurung");
+  await expect(page.getByRole("dialog").getByLabel(/City \/ municipality/)).toHaveValue("Thamel");
+});
+
+test("a booking page tracks progress, adds a calendar entry, takes passports and change requests", async ({
+  page,
+}) => {
+  await register(page, "/portal/dates?city=kathmandu");
+  await page
+    .getByRole("button", { name: /^Select/ })
+    .first()
+    .click();
+  await fillDetails(page);
+  const ref = await confirmBooking(page);
+  await page.getByRole("dialog").getByRole("link", { name: "View this request" }).click();
+
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("IELTS");
+  await expect(page.getByRole("list", { name: "Booking progress" })).toBeVisible();
+  await expect(page.getByText(ref).first()).toBeVisible();
+
+  // Calendar file
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Add to calendar" }).click();
+  expect((await download).suggestedFilename()).toBe(`${ref}.ics`);
+
+  // Passport added after booking
+  await expect(page.getByText(/Front: missing/)).toBeVisible();
+  await page.locator("#doc-front").setInputFiles(PNG);
+  await page.getByRole("button", { name: "Upload", exact: true }).click();
+  await expect(page.getByText("Passport uploaded.")).toBeVisible();
+  await expect(page.getByText(/Front: uploaded/)).toBeVisible();
+
+  // Change request
+  await page.getByLabel("Tell us what to change").fill("Please move me to the following week.");
+  await page.getByRole("button", { name: "Send request" }).click();
+  await expect(page.getByText("Waiting for our team")).toBeVisible();
+
+  // Checklist is remembered
+  await page.getByLabel("Original passport packed").check();
+  await page.reload();
+  await expect(page.getByLabel("Original passport packed")).toBeChecked();
+});
+
+test("a student can withdraw an unconfirmed request", async ({ page }) => {
+  await register(page, "/portal/dates?city=kathmandu");
+  await page
+    .getByRole("button", { name: /^Select/ })
+    .first()
+    .click();
+  await fillDetails(page);
+  await confirmBooking(page);
+  await page.getByRole("dialog").getByRole("link", { name: "View this request" }).click();
+  await page.getByRole("button", { name: "Withdraw request" }).click();
+  await page.getByRole("button", { name: "Yes, withdraw" }).click();
+  await expect(page.getByText("Cancelled").first()).toBeVisible();
+  await expect(page.getByRole("link", { name: "Book again" })).toBeVisible();
+});
+
+/* ------------------------------------------------------------------ admin dashboard */
+test("staff sign in to the admin dashboard and manage dates and requests", async ({ page }) => {
+  await adminLogin(page);
   await expect(page.getByRole("heading", { name: "Overview", level: 1 })).toBeVisible();
   await expect(page.getByLabel("Key numbers")).toContainText("Awaiting confirmation");
 
@@ -264,6 +362,8 @@ test("staff sign in to the admin dashboard and manage dates and requests", async
   await expect(page.getByRole("heading", { name: "Booking requests", level: 1 })).toBeVisible();
   await page.getByRole("tab", { name: /^Confirmed/ }).click();
   await expect(page).toHaveURL(/status=confirmed/);
+  await page.getByRole("tab", { name: /^Change requests/ }).click();
+  await expect(page).toHaveURL(/change=open/);
 
   await adminNav(page, /^Inquiries/);
   await expect(page.getByRole("heading", { name: "Inquiries", level: 1 })).toBeVisible();
@@ -271,39 +371,35 @@ test("staff sign in to the admin dashboard and manage dates and requests", async
   await expect(page.getByLabel("WhatsApp number")).not.toHaveValue("");
 });
 
-test("staff confirm a request from the dashboard", async ({ page, browser }) => {
-  // A student makes a request...
+test("staff confirm a request and resolve a change request from the dashboard", async ({
+  page,
+  browser,
+}) => {
+  // A student makes a request and asks for a change...
   const sctx = await browser.newContext();
+  await sctx.route("https://wa.me/**", (r) => r.fulfill({ body: "ok" }));
   const sp = await sctx.newPage();
-  await sp.goto("/ielts-test-dates?city=chitwan");
+  await register(sp, "/portal/dates?city=chitwan");
   await sp
-    .getByRole("link", { name: /^Book this date/ })
+    .getByRole("button", { name: /^Select/ })
     .first()
     .click();
-  await sp.getByRole("link", { name: "Create a free account" }).click();
-  await fillRegistration(sp, uniqueUser());
   await fillDetails(sp, { province: "Bagmati", district: "Chitwan", city: "Bharatpur" });
-  await sp.getByRole("button", { name: "Proceed" }).click();
-  await sp.getByLabel(/I agree to the/).check();
-  await sctx.route("https://wa.me/**", (r) => r.fulfill({ body: "ok" }));
-  const popup = sp.context().waitForEvent("page");
-  await sp.getByRole("button", { name: "Confirm and continue on WhatsApp" }).click();
-  await (await popup).close();
-  const reference =
-    (await sp.getByText(/Booking request BYI-/).textContent())?.match(/BYI-\d{4}-\d{6}/)?.[0] ?? "";
-  expect(reference).not.toBe("");
+  const reference = await confirmBooking(sp);
+  await sp.getByRole("dialog").getByRole("link", { name: "View this request" }).click();
+  await sp.getByLabel("Tell us what to change").fill("Please correct the spelling of my name.");
+  await sp.getByRole("button", { name: "Send request" }).click();
+  await expect(sp.getByText("Waiting for our team")).toBeVisible();
   await sctx.close();
 
-  // ...and staff find it and confirm it.
-  await page.goto("/login");
-  await page.waitForLoadState("networkidle");
-  await page.getByLabel("Email").fill(ADMIN.email);
-  await page.getByLabel("Password").fill(ADMIN.password);
-  await page.getByRole("button", { name: "Log in" }).click();
-  await expect(page).toHaveURL(/\/portal\/manage$/);
+  // ...and staff find it, resolve the change and confirm the booking.
+  await adminLogin(page);
   await page.goto(`/portal/manage/bookings?q=${reference}`);
   await page.getByRole("link", { name: reference }).first().click();
   await expect(page.getByText("Awaiting confirmation").first()).toBeVisible();
+  await expect(page.getByText(/correct the spelling of my name/)).toBeVisible();
+  await page.getByRole("button", { name: "Mark as resolved" }).click();
+  await expect(page.getByText("Resolved", { exact: true })).toBeVisible();
   await page.getByRole("textbox", { name: "Internal notes" }).fill("Paid by cash");
   await page.getByRole("button", { name: "Save notes" }).click();
   await expect(page.getByText("Saved")).toBeVisible();

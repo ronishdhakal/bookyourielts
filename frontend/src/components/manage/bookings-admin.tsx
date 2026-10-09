@@ -27,11 +27,19 @@ export function BookingsAdmin() {
   const q = useQueryState();
   const { stats } = useStats();
   const status = q.get("status");
+  const change = q.get("change") === "open";
   const page = Number(q.get("page") || 1);
   const cities = useLoader("cities", () => catalogApi.cities());
   const list = useLoader(`bookings|${q.key}`, (signal) =>
     manageApi.bookings(
-      { status, q: q.get("q"), city: q.get("city"), provider: q.get("provider"), page },
+      {
+        status,
+        change: change ? "open" : "",
+        q: q.get("q"),
+        city: q.get("city"),
+        provider: q.get("provider"),
+        page,
+      },
       signal,
     ),
   );
@@ -44,11 +52,18 @@ export function BookingsAdmin() {
       />
       <Tabs
         label="Status"
-        value={(status || "all") as "all" | BookingStatus}
-        onChange={(v) => q.set({ status: v === "all" ? "" : v })}
+        value={(change ? "change" : status || "all") as "all" | "change" | BookingStatus}
+        onChange={(v) =>
+          q.set(
+            v === "change"
+              ? { status: "", change: "open" }
+              : { status: v === "all" ? "" : v, change: "" },
+          )
+        }
         items={[
           { value: "all", label: "All" },
           { value: "initiated", label: "Awaiting confirmation", count: stats?.bookings.initiated },
+          { value: "change", label: "Change requests", count: stats?.change_requests },
           { value: "confirmed", label: "Confirmed" },
           { value: "cancelled", label: "Cancelled" },
         ]}
@@ -203,7 +218,11 @@ export function BookingAdminDetail({ id }: { id: string }) {
   if (!b) return <SkeletonRows rows={5} />;
   const s = b.session;
 
-  async function apply(body: { status?: BookingStatus; admin_notes?: string }) {
+  async function apply(body: {
+    status?: BookingStatus;
+    admin_notes?: string;
+    resolve_change?: boolean;
+  }) {
     if (!b) return;
     setBusy(true);
     setError(null);
@@ -244,7 +263,7 @@ export function BookingAdminDetail({ id }: { id: string }) {
             <dl className="divide-mist divide-y">
               <Detail k="Test" v={`${s.provider_label} · ${s.test_type.name}`} />
               <Detail k="Format" v={s.format_label} />
-              <Detail k="Test day" v={`${formatLong(s.date)}, ${s.date.slice(0, 4)}`} />
+              <Detail k="Test day" v={formatLong(s.date)} />
               <Detail
                 k="Session"
                 v={`${s.slot === "morning" ? "Morning" : "Afternoon"}, ${SLOT_TIMES[s.slot]}`}
@@ -422,6 +441,32 @@ export function BookingAdminDetail({ id }: { id: string }) {
               </p>
             )}
           </section>
+
+          {b.change_requested_at && (
+            <section className="panel panel-pad" aria-labelledby="chg">
+              <h2 id="chg" className="text-lg font-bold">
+                Change request
+              </h2>
+              <p className="mt-2 rounded-lg bg-[#f7f8fa] p-3 text-[0.9375rem]">
+                “{b.change_request}”
+              </p>
+              <p className="text-muted mt-2 text-[0.8125rem]">
+                Asked {relativeTime(b.change_requested_at)}
+              </p>
+              {b.change_open ? (
+                <button
+                  type="button"
+                  className="btn btn-dark btn-sm mt-3"
+                  disabled={busy}
+                  onClick={() => void apply({ resolve_change: true })}
+                >
+                  Mark as resolved
+                </button>
+              ) : (
+                <p className="mt-3 font-semibold">Resolved</p>
+              )}
+            </section>
+          )}
 
           <section className="panel panel-pad" aria-labelledby="notes">
             <h2 id="notes" className="text-lg font-bold">

@@ -1,7 +1,7 @@
-import { BookingsPage } from "@/components/portal/bookings-page";
+import { BookingsList } from "@/components/portal/bookings";
 
-export const metadata = { title: "My bookings" };
+export const metadata = { title: "Bookings" };
 
 export default function Page() {
-  return <BookingsPage />;
+  return <BookingsList />;
 }

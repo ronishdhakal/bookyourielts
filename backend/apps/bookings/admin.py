@@ -9,7 +9,7 @@ from unfold.decorators import display
 from apps.core.admin import export_csv
 
 from . import services
-from .models import BookingRequest, BookingStatus, Inquiry, InquiryStatus
+from .models import BookingRequest, BookingStatus, Candidate, DateAlert, Inquiry, InquiryStatus
 
 
 def _wa_link(phone: str) -> str:
@@ -291,3 +291,27 @@ class InquiryAdmin(ModelAdmin):
             "admin_notes",
         ]
         return export_csv(self, queryset.select_related("preferred_city", "test_type"), cols, "inquiries")
+
+
+@admin.register(Candidate)
+class CandidateAdmin(ModelAdmin):
+    list_display = ["full_name", "relation", "phone", "user", "created_at"]
+    search_fields = ["full_name", "phone", "user__email"]
+    autocomplete_fields = ["user"]
+
+
+@admin.register(DateAlert)
+class DateAlertAdmin(ModelAdmin):
+    list_display = [
+        "user",
+        "provider",
+        "category",
+        "test_type",
+        "test_format",
+        "city",
+        "month",
+        "is_active",
+        "created_at",
+    ]
+    list_filter = ["is_active", "provider", "category", "city"]
+    autocomplete_fields = ["user"]

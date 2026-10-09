@@ -1,7 +1,7 @@
-import { PortalHome } from "@/components/portal/portal-home";
+import { Dashboard } from "@/components/portal/dashboard";
 
-export const metadata = { title: "Home" };
+export const metadata = { title: "Dashboard" };
 
-export default function PortalHomePage() {
-  return <PortalHome />;
+export default function Page() {
+  return <Dashboard />;
 }

@@ -3,9 +3,11 @@ import type {
   Booking,
   BookingStatus,
   City,
+  DateAlert,
   Inquiry,
   InquiryStatus,
   Page,
+  SavedCandidate,
   SiteInfo,
   StaffBooking,
   StaffInquiry,
@@ -122,6 +124,10 @@ export const bookingApi = {
   mine: () => api<Booking[]>("/bookings/"),
   get: (id: number | string) => api<Booking>(`/bookings/${id}/`),
   cancel: (id: number) => api<Booking>(`/bookings/${id}/cancel/`, { method: "POST" }),
+  documents: (id: number, form: FormData) =>
+    api<Booking>(`/bookings/${id}/documents/`, { method: "POST", form }),
+  requestChange: (id: number, message: string) =>
+    api<Booking>(`/bookings/${id}/change-request/`, { method: "POST", body: { message } }),
   resend: (id: number) => api<Booking>(`/bookings/${id}/whatsapp/`, { method: "POST" }),
 };
 
@@ -170,8 +176,10 @@ export const manageApi = {
   bookings: (p: Params, signal?: AbortSignal) =>
     api<Page<StaffBooking>>(`/manage/bookings/${query(p)}`, { signal }),
   booking: (id: number | string) => api<StaffBooking>(`/manage/bookings/${id}/`),
-  updateBooking: (id: number, body: { status?: BookingStatus; admin_notes?: string }) =>
-    api<StaffBooking>(`/manage/bookings/${id}/`, { method: "PATCH", body }),
+  updateBooking: (
+    id: number,
+    body: { status?: BookingStatus; admin_notes?: string; resolve_change?: boolean },
+  ) => api<StaffBooking>(`/manage/bookings/${id}/`, { method: "PATCH", body }),
   inquiries: (p: Params, signal?: AbortSignal) =>
     api<Page<StaffInquiry>>(`/manage/inquiries/${query(p)}`, { signal }),
   updateInquiry: (id: number, body: { status?: InquiryStatus; admin_notes?: string }) =>
@@ -187,4 +195,30 @@ export const manageApi = {
   settings: () => api<StaffSettings>("/manage/settings/"),
   updateSettings: (body: Partial<StaffSettings>) =>
     api<StaffSettings>("/manage/settings/", { method: "PATCH", body }),
+};
+
+export const candidateApi = {
+  list: () => api<SavedCandidate[]>("/candidates/"),
+  create: (form: FormData) => api<SavedCandidate>("/candidates/", { method: "POST", form }),
+  update: (id: number, form: FormData) =>
+    api<SavedCandidate>(`/candidates/${id}/`, { method: "PATCH", form }),
+  remove: (id: number) => api<void>(`/candidates/${id}/`, { method: "DELETE" }),
+};
+
+export interface AlertInput {
+  provider?: string;
+  category?: string;
+  test_type?: string | null;
+  test_format?: string;
+  city?: string | null;
+  month?: string;
+}
+
+export const alertApi = {
+  list: () => api<DateAlert[]>("/alerts/"),
+  create: (body: AlertInput) => api<DateAlert>("/alerts/", { method: "POST", body }),
+  update: (id: number, body: { is_active: boolean }) =>
+    api<DateAlert>(`/alerts/${id}/`, { method: "PATCH", body }),
+  remove: (id: number) => api<void>(`/alerts/${id}/`, { method: "DELETE" }),
+  seen: (id: number) => api<DateAlert>(`/alerts/${id}/seen/`, { method: "POST" }),
 };

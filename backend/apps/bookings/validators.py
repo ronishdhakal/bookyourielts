@@ -23,3 +23,30 @@ def validate_passport_file(f) -> None:
     f.seek(0)
     if not any(head.startswith(sig) for sig in _SIGNATURES[ext]) or (ext == ".webp" and b"WEBP" not in head):
         raise ValidationError("This file does not look like a valid image or PDF.")
+
+
+def check_date_of_birth(value):
+    """Shared by bookings and saved candidates. Raises Django ValidationError."""
+    from django.utils import timezone
+
+    if value is None:
+        return value
+    today = timezone.localdate()
+    if value >= today:
+        raise ValidationError("Date of birth must be in the past.")
+    if (today - value).days < 14 * 365:
+        raise ValidationError("Candidates must be at least 14 years old.")
+    if (today - value).days > 100 * 365:
+        raise ValidationError("Check the year of birth.")
+    return value
+
+
+def check_region(province: str, district: str) -> None:
+    from apps.core.nepal import DISTRICTS, PROVINCES
+
+    if province and province not in PROVINCES:
+        raise ValidationError({"province": "Choose a province from the list."})
+    if district and district not in DISTRICTS:
+        raise ValidationError({"district": "Choose a district from the list."})
+    if district and province and district not in PROVINCES[province]:
+        raise ValidationError({"district": f"{district} is not in {province} province."})

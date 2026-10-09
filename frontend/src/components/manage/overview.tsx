@@ -138,6 +138,35 @@ export function Overview() {
         />
       </section>
 
+      {(stats.change_requests > 0 || stats.alerts.unmatched > 0) && (
+        <section
+          aria-label="Needs attention"
+          className="border-crimson mt-6 rounded-lg border-l-4 bg-white px-5 py-4"
+        >
+          <h2 className="font-bold">Needs attention</h2>
+          <ul className="mt-1 space-y-1 text-[0.9375rem]">
+            {stats.change_requests > 0 && (
+              <li>
+                <Link
+                  href={portalHref("/manage/bookings?change=open")}
+                  className="text-crimson font-semibold underline underline-offset-4"
+                >
+                  {stats.change_requests} change{" "}
+                  {stats.change_requests === 1 ? "request" : "requests"}
+                </Link>{" "}
+                from students waiting for a reply.
+              </li>
+            )}
+            {stats.alerts.unmatched > 0 && (
+              <li>
+                <strong>{stats.alerts.unmatched}</strong> of {stats.alerts.active} date alerts have
+                no matching date yet. These students are waiting for you to open dates.
+              </li>
+            )}
+          </ul>
+        </section>
+      )}
+
       <div className="mt-6 grid items-start gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         <section className="panel panel-pad">
           <Bars data={stats.per_day} />

@@ -42,12 +42,12 @@ One family, **Public Sans** (via `next/font`), with tabular figures. Scale: 14 /
   table; four process steps; exam types and cities side by side; independence statement; FAQ; closing band.
 - **Dates:** a data table from tablet width, stacked rows on phones. Columns: test date and session, exam and provider,
   city, format, register by, results from, fee, seats, action.
-- **Portal (as in the reference):** grey background, profile card on the left (avatar, status, member since, mobile, email,
-  date of birth), white content panel on the right. Home has a welcome line, a red "Book your IELTS test date" band and a
-  "Reserve your date today" tile. The tile opens a **Choose provider** dialog.
-- **Booking form:** back button, "Bookings" title, breadcrumb. Three steps in one panel with label-left rows:
-  *Exam preference* (IELTS exam, type, format, city, examinee) → *Candidate detail* (preferred date with a calendar that
-  underlines days with seats, personal, address, passport) → *Review and confirm*.
+- **Portal:** a white left sidebar (Dashboard, Find a date, Bookings, Candidates, Alerts, Profile) with count badges, a slim
+  top bar with the date, a notification bell and the user menu, and a grey work area up to 1536px. The dashboard leads with the
+  next test and its tracker; the right column holds the to-do list, alerts and the test-day reminder. On phones the sidebar
+  becomes a menu plus a four-item bottom bar.
+- **Booking:** date first. *Find a date* lists dates with seat meters (or a month calendar with session counts), and
+  *Select* opens a 36rem slide-over: who is taking the test, details, review, confirm.
 - **Admin:** left sidebar with counts, white panels, tables on desktop and stacked rows on phones.
 
 ## Components

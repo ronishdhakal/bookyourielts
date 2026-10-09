@@ -18,7 +18,7 @@ function Action({ s, block = false }: { s: TestSession; block?: boolean }) {
   if (s.is_bookable) {
     return (
       <Link
-        href={appHref(`/book?session=${s.id}`)}
+        href={appHref(`/dates?session=${s.id}`)}
         className={`btn btn-primary btn-sm whitespace-nowrap ${width}`}
         aria-label={`Book this date: ${s.test_type.name}, ${s.city.name}, ${formatDate(s.date)}`}
       >

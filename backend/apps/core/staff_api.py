@@ -6,7 +6,7 @@ overview numbers, booking requests, inquiries, test dates and site settings.
 
 from datetime import timedelta
 
-from django.db.models import Count, Q, Sum
+from django.db.models import Count, F, Q, Sum
 from django.db.models.functions import TruncDate
 from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404
@@ -17,7 +17,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.bookings import services
-from apps.bookings.models import BookingRequest, BookingStatus, Inquiry, InquiryStatus
+from apps.bookings.alerts import matching_sessions
+from apps.bookings.models import BookingRequest, BookingStatus, DateAlert, Inquiry, InquiryStatus
 from apps.catalog.api import SessionSerializer
 from apps.catalog.models import City, Provider, TestFormat, TestSession, TestType, Venue
 
@@ -72,6 +73,12 @@ class StatsView(StaffView, APIView):
                     "total": sum(by_status.values()),
                 },
                 "new_inquiries": Inquiry.objects.filter(status=InquiryStatus.NEW).count(),
+                "change_requests": BookingRequest.objects.filter(change_requested_at__isnull=False)
+                .filter(
+                    Q(change_resolved_at__isnull=True) | Q(change_resolved_at__lt=F("change_requested_at"))
+                )
+                .count(),
+                "alerts": _alert_demand(),
                 "open_dates": upcoming.filter(registration_closes_on__gte=today).count(),
                 "hidden_dates": TestSession.objects.filter(is_visible=False, date__gte=today).count(),
                 "seats_next_30_days": {"total": window["total"] or 0, "booked": window["booked"] or 0},
@@ -95,6 +102,13 @@ class StatsView(StaffView, APIView):
         )
 
 
+def _alert_demand() -> dict:
+    """Active alerts, and how many of them have no date to offer yet (unmet demand)."""
+    active = list(DateAlert.objects.filter(is_active=True).select_related("test_type", "city"))
+    unmatched = sum(1 for a in active if not matching_sessions(a).exists())
+    return {"active": len(active), "unmatched": unmatched}
+
+
 def _student_count() -> int:
     from apps.accounts.models import User
 
@@ -116,6 +130,7 @@ class StaffBookingSerializer(serializers.ModelSerializer):
     has_passport_front = serializers.SerializerMethodField()
     has_passport_back = serializers.SerializerMethodField()
     whatsapp_url = serializers.SerializerMethodField()
+    change_open = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = BookingRequest
@@ -140,6 +155,9 @@ class StaffBookingSerializer(serializers.ModelSerializer):
             "has_passport_back",
             "admin_notes",
             "whatsapp_url",
+            "change_request",
+            "change_requested_at",
+            "change_open",
         ]
         read_only_fields = [f for f in fields if f not in ("status", "admin_notes")]
 
@@ -173,6 +191,10 @@ class StaffBookingList(StaffView, generics.ListAPIView):
             qs = qs.filter(session__city__slug=p["city"])
         if p.get("provider") in Provider.values:
             qs = qs.filter(session__provider=p["provider"])
+        if p.get("change") == "open":
+            qs = qs.filter(change_requested_at__isnull=False).filter(
+                Q(change_resolved_at__isnull=True) | Q(change_resolved_at__lt=F("change_requested_at"))
+            )
         if q := p.get("q", "").strip():
             qs = qs.filter(
                 Q(reference__icontains=q)
@@ -195,6 +217,9 @@ class StaffBookingDetail(StaffView, generics.RetrieveUpdateAPIView):
         new_status = request.data.get("status")
         if new_status is not None and new_status not in BookingStatus.values:
             return Response({"status": ["Unknown status."]}, status=status.HTTP_400_BAD_REQUEST)
+        if request.data.get("resolve_change"):
+            booking.change_resolved_at = timezone.now()
+            booking.save(update_fields=["change_resolved_at", "updated_at"])
         if "admin_notes" in request.data:
             booking.admin_notes = str(request.data["admin_notes"])[:5000]
             booking.save(update_fields=["admin_notes", "updated_at"])

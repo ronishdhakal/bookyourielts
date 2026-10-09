@@ -26,19 +26,28 @@ docs/       design-brief.md
 ## How a student books
 
 1. **bookyourielts.com** (marketing site): browse dates, fees and guides. Every date has a **Book this date** button.
-2. **users.bookyourielts.com** (student portal, `/portal` in local development): after logging in the student has a home
-   with their profile, a **Book an exam** stepper and **My bookings**.
-3. The stepper: **provider** (British Council or IDP, shown as text, never with their logos) → **exam preferences**
-   (Regular or UKVI, test type, format, city; only cities with open dates are offered) → **date** (calendar of open days, then the
-   session) → **candidate details** (myself or someone else, name, mobile, email, date of birth, province, district,
-   city, optional passport front and back) → **review and confirm**.
-4. WhatsApp is mentioned **only on the last step**. Confirming saves the request (`BYI-2026-000123`), opens WhatsApp with
-   the prefilled message and shows what happens next. Requests can later be re-sent or, until confirmed, withdrawn.
+2. **users.bookyourielts.com** (student portal, `/portal` in development): a left-sidebar app with a notification bell.
+   - **Dashboard**: next test with a day countdown and a five-step progress tracker, a to-do list (add a passport, verify
+     your email), date alerts and recent bookings.
+   - **Find a date**: every open date with live seat meters, filtered by provider, Regular or UKVI, test type, format, city
+     and month, as a **list** or a **month calendar**. Selecting a date opens a slide-over panel, so booking never leaves
+     the page.
+   - **Booking panel**: choose who is taking the test (yourself, a saved candidate, or someone new), check the details,
+     review, and confirm. WhatsApp is named only on the review step; confirming saves the request (`BYI-2026-000123`),
+     opens WhatsApp with the prefilled message and shows what happens next.
+   - **Candidates**: people you book for (a child, a sibling, a client) with their details and passport, reused on every
+     booking. Booking for someone new can save them in one tick.
+   - **Alerts**: save a search and see how many open dates match it and which are new since you last looked. Matches also
+     appear in the bell. Staff see how many alerts have no date yet, which is real unmet demand.
+   - **Bookings**: a table with filters and search; each booking has a progress tracker, passport upload after the fact,
+     **change requests** to the team (flagged for staff until resolved), an **Add to calendar** `.ics` file, a printable
+     summary, a test-day checklist remembered on the device, and withdrawal until confirmed. **Book again** appears on
+     cancelled requests.
 
-If a student arrives from a date on the marketing site, the stepper opens straight on the candidate details with
-that date already chosen. Both hosts are one Next.js app: `src/proxy.ts` serves the portal at the root of the `users.` host
-(internally `/portal/...`) and redirects `/portal/*` on the main host. Without `NEXT_PUBLIC_APP_URL` (development) there is
-a single host and the portal lives under `/portal`. One login covers both hosts through `COOKIE_DOMAIN=.bookyourielts.com`.
+If a student arrives from a date on the marketing site, the booking panel opens with that date already chosen. Both hosts are
+one Next.js app: `src/proxy.ts` serves the portal at the root of the `users.` host (internally `/portal/...`) and redirects
+`/portal/*` on the main host. Without `NEXT_PUBLIC_APP_URL` (development) there is a single host and the portal lives under
+`/portal`. One login covers both hosts through `COOKIE_DOMAIN=.bookyourielts.com`.
 
 The browser only talks to its own origin. Next.js proxies `/api/*` to Django (in production nginx routes `/api`,
 `/admin` and `/django-static` straight to Django), so session and CSRF cookies are first-party.
@@ -101,7 +110,8 @@ Log in at `/admin/`. The sidebar groups everything an operator needs:
   every combination of cities, test types, formats and sessions on a weekly or custom repeat. Existing dates are never
   duplicated. Registration closing (6 days before) and results dates (5 days computer, 13 days Writing on Paper) are filled
   in automatically if left empty. Bulk actions show, hide or duplicate dates.
-- **Booking requests**: filter by status, date and city. Each request shows the candidate's details; passport images open
+- **Booking requests**: filter by status, date and city. A **Change requests** tab lists students waiting for a reply, with a
+  *Mark as resolved* button on the request. Each request shows the candidate's details; passport images open
   through a staff-only admin link (they are stored privately, never at a public URL). Mark requests **confirmed** (takes a seat, refuses if the date is
   full) or **cancelled** (gives the seat back). Seat counts only ever change through this path, inside a database
   transaction with row locks. Each row links to the student on WhatsApp. Export to CSV from the Actions menu.

@@ -4,6 +4,7 @@ from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 from apps.bookings import api as bookings
+from apps.bookings import portal_api as portal
 from apps.catalog import api as catalog
 from apps.core import api as core
 from apps.core import staff_api as staff
@@ -22,6 +23,13 @@ api_v1 = [
     path("bookings/<int:pk>/", bookings.BookingDetailView.as_view()),
     path("bookings/<int:pk>/whatsapp/", bookings.BookingWhatsAppView.as_view()),
     path("bookings/<int:pk>/cancel/", bookings.BookingCancelView.as_view()),
+    path("bookings/<int:pk>/documents/", portal.BookingDocumentsView.as_view()),
+    path("bookings/<int:pk>/change-request/", portal.BookingChangeRequestView.as_view()),
+    path("candidates/", portal.CandidateListCreate.as_view()),
+    path("candidates/<int:pk>/", portal.CandidateDetail.as_view()),
+    path("alerts/", portal.AlertListCreate.as_view()),
+    path("alerts/<int:pk>/", portal.AlertDetail.as_view()),
+    path("alerts/<int:pk>/seen/", portal.AlertSeen.as_view()),
     path("regions/", core.RegionsView.as_view()),
     path("inquiries/", bookings.InquiryCreateView.as_view()),
     path("inquiries/mine/", bookings.MyInquiryListView.as_view()),

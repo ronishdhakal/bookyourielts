@@ -36,6 +36,7 @@ export interface TestSession {
   format_label: string;
   fee_npr: number;
   seats_left: number;
+  seats_total: number;
   seat_status: SeatStatus;
   seat_status_label: string;
   is_bookable: boolean;
@@ -79,6 +80,41 @@ export interface Booking {
   district: string;
   municipality: string;
   has_passport: boolean;
+  has_passport_back: boolean;
+  candidate: number | null;
+  change_request: string;
+  change_requested_at: string | null;
+  change_open: boolean;
+}
+
+export interface SavedCandidate {
+  id: number;
+  relation: string;
+  full_name: string;
+  phone: string;
+  email: string;
+  date_of_birth: string | null;
+  province: string;
+  district: string;
+  municipality: string;
+  has_passport_front: boolean;
+  has_passport_back: boolean;
+  created_at: string;
+}
+
+export interface DateAlert {
+  id: number;
+  provider: ProviderCode | "";
+  category: "regular" | "ukvi" | "";
+  test_type: string | null;
+  test_format: TestFormat | "";
+  city: string | null;
+  month: string;
+  is_active: boolean;
+  created_at: string;
+  matches: number;
+  new_matches: number;
+  next_date: string | null;
 }
 
 export interface Inquiry {
@@ -135,6 +171,8 @@ export interface SessionFilters {
 export interface Stats {
   bookings: { initiated: number; confirmed: number; cancelled: number; total: number };
   new_inquiries: number;
+  change_requests: number;
+  alerts: { active: number; unmatched: number };
   open_dates: number;
   hidden_dates: number;
   seats_next_30_days: { total: number; booked: number };
@@ -174,6 +212,9 @@ export interface StaffBooking {
   has_passport_back: boolean;
   admin_notes: string;
   whatsapp_url: string;
+  change_request: string;
+  change_requested_at: string | null;
+  change_open: boolean;
 }
 
 export interface StaffInquiry {

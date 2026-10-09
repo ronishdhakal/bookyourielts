@@ -36,6 +36,8 @@ class BookingSerializer(serializers.ModelSerializer):
     status_label = serializers.CharField(source="get_status_display", read_only=True)
     whatsapp_url = serializers.SerializerMethodField()
     has_passport = serializers.SerializerMethodField()
+    has_passport_back = serializers.SerializerMethodField()
+    change_open = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = BookingRequest
@@ -56,6 +58,11 @@ class BookingSerializer(serializers.ModelSerializer):
             "district",
             "municipality",
             "has_passport",
+            "has_passport_back",
+            "candidate",
+            "change_request",
+            "change_requested_at",
+            "change_open",
         ]
 
     def get_whatsapp_url(self, obj) -> str:
@@ -64,12 +71,18 @@ class BookingSerializer(serializers.ModelSerializer):
     def get_has_passport(self, obj) -> bool:
         return bool(obj.passport_front)
 
+    def get_has_passport_back(self, obj) -> bool:
+        return bool(obj.passport_back)
+
 
 class BookingCreateSerializer(serializers.Serializer):
     """Candidate details from the booking form. Everything except the session is optional so the
     endpoint stays usable by simple clients; the website form asks for the essentials."""
 
     session = serializers.IntegerField()
+    candidate = serializers.IntegerField(required=False, allow_null=True)
+    save_candidate = serializers.BooleanField(required=False, default=False)
+    relation = serializers.CharField(max_length=40, required=False, allow_blank=True)
     examinee = serializers.ChoiceField(choices=Examinee.choices, default=Examinee.SELF)
     candidate_name = serializers.CharField(max_length=120, required=False, allow_blank=True)
     candidate_phone = PhoneField(required=False, allow_blank=True)
@@ -106,6 +119,64 @@ class BookingCreateSerializer(serializers.Serializer):
         return attrs
 
 
+CANDIDATE_TO_BOOKING = {
+    "full_name": "candidate_name",
+    "phone": "candidate_phone",
+    "email": "candidate_email",
+    "date_of_birth": "date_of_birth",
+    "province": "province",
+    "district": "district",
+    "municipality": "municipality",
+}
+
+
+def _resolve_candidate(user, data: dict):
+    """Fill the booking details from a saved candidate, and optionally save a new candidate.
+
+    Mutates `data` (the validated booking fields). Returns the Candidate used, None, or an error Response.
+    """
+    from .models import Candidate
+
+    cand_id = data.pop("candidate", None)
+    save = data.pop("save_candidate", False)
+    relation = data.pop("relation", "")
+    cand = None
+    if cand_id:
+        cand = Candidate.objects.filter(pk=cand_id, user=user).first()
+        if cand is None:
+            return Response(
+                {"candidate": ["This saved candidate was not found."]}, status=status.HTTP_400_BAD_REQUEST
+            )
+        for src, dst in CANDIDATE_TO_BOOKING.items():
+            if not data.get(dst):
+                data[dst] = getattr(cand, src)
+        for field in ("passport_front", "passport_back"):
+            if not data.get(field) and getattr(cand, field):
+                data[field] = getattr(cand, field)
+    elif save and data.get("candidate_name"):
+        from django.db.models import Q
+
+        qs = Candidate.objects.filter(user=user, full_name__iexact=data["candidate_name"].strip())
+        if data.get("date_of_birth"):
+            qs = qs.filter(Q(date_of_birth=data["date_of_birth"]) | Q(date_of_birth__isnull=True))
+        cand = qs.first()
+        if cand is None and Candidate.objects.filter(user=user).count() < 20:
+            cand = Candidate(user=user, full_name=data["candidate_name"].strip())
+        if cand is not None:
+            for src, dst in CANDIDATE_TO_BOOKING.items():
+                if data.get(dst):
+                    setattr(cand, src, data[dst])
+            if relation:
+                cand.relation = relation
+            for field in ("passport_front", "passport_back"):
+                if data.get(field):
+                    setattr(cand, field, data[field])
+            cand.save()
+    if cand is not None:
+        data["candidate"] = cand
+    return cand
+
+
 class BookingListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]
     filter_backends: list = []
@@ -128,6 +199,9 @@ class BookingListCreateView(generics.ListCreateAPIView):
         ser.is_valid(raise_exception=True)
         data = dict(ser.validated_data)
         session_id = data.pop("session")
+        saved = _resolve_candidate(request.user, data)
+        if isinstance(saved, Response):
+            return saved
         for key in ("passport_front", "passport_back"):
             if data.get(key) is None:
                 data.pop(key, None)

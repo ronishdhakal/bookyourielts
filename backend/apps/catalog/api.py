@@ -38,6 +38,7 @@ class SessionSerializer(serializers.ModelSerializer):
     venue = serializers.SerializerMethodField()
     test_type = TestTypeSerializer(read_only=True)
     seats_left = serializers.IntegerField(source="seats_available", read_only=True)
+    seats_total = serializers.IntegerField(read_only=True)
     seat_status = serializers.SerializerMethodField()
     seat_status_label = serializers.SerializerMethodField()
     is_bookable = serializers.SerializerMethodField()
@@ -59,6 +60,7 @@ class SessionSerializer(serializers.ModelSerializer):
             "format_label",
             "fee_npr",
             "seats_left",
+            "seats_total",
             "seat_status",
             "seat_status_label",
             "is_bookable",
