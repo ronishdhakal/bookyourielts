@@ -1,5 +1,6 @@
 "use client";
 
+import { ProviderLogo } from "../provider-logo";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -162,9 +163,11 @@ export function DatesAdmin() {
                     </p>
                   </td>
                   <td className="px-3 py-3">
-                    <p>{s.test_type_name}</p>
+                    <p className="flex items-center gap-2">
+                      <ProviderLogo provider={s.provider} label={s.provider_label} height={22} />
+                      <span>{s.test_type_name}</span>
+                    </p>
                     <p className="text-muted text-[0.8125rem]">
-                      {s.provider_label} ·{" "}
                       {s.format === "computer" ? "Computer" : "Computer + paper Writing"}
                     </p>
                   </td>

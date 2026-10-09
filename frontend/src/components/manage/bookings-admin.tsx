@@ -1,5 +1,6 @@
 "use client";
 
+import { ProviderLogo } from "../provider-logo";
 import Link from "next/link";
 import { useState } from "react";
 import { ApiError, catalogApi, manageApi } from "@/lib/api";
@@ -141,10 +142,15 @@ export function BookingsAdmin() {
                     </p>
                   </td>
                   <td className="px-3 py-3">
-                    <p>{b.session.test_type.name}</p>
-                    <p className="text-muted text-[0.8125rem]">
-                      {b.session.provider_label} · {b.session.city.name}
+                    <p className="flex items-center gap-2">
+                      <ProviderLogo
+                        provider={b.session.provider}
+                        label={b.session.provider_label}
+                        height={22}
+                      />
+                      <span>{b.session.test_type.name}</span>
                     </p>
+                    <p className="text-muted text-[0.8125rem]">{b.session.city.name}</p>
                   </td>
                   <td className="px-3 py-3 whitespace-nowrap">
                     {formatDate(b.session.date, { weekday: "short" })}

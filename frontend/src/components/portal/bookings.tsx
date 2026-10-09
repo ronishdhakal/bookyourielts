@@ -1,5 +1,6 @@
 "use client";
 
+import { ProviderLogo } from "../provider-logo";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { ApiError, bookingApi } from "@/lib/api";
@@ -135,10 +136,15 @@ export function BookingsList() {
                         </Link>
                       </td>
                       <td className="px-3 py-3.5">
-                        <p className="font-semibold">{b.session.test_type.name}</p>
-                        <p className="text-muted text-[0.8125rem]">
-                          {b.session.provider_label} · {b.session.city.name}
+                        <p className="flex items-center gap-2 font-semibold">
+                          <ProviderLogo
+                            provider={b.session.provider}
+                            label={b.session.provider_label}
+                            height={28}
+                          />
+                          <span>{b.session.test_type.name}</span>
                         </p>
+                        <p className="text-muted text-[0.8125rem]">{b.session.city.name}</p>
                       </td>
                       <td className="px-3 py-3.5">{b.candidate_name || "—"}</td>
                       <td className="px-3 py-3.5 whitespace-nowrap">
@@ -171,7 +177,14 @@ export function BookingsList() {
                     <Link href={portalHref(`/bookings/${b.id}`)} className="block px-4 py-4">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <p className="font-semibold">{b.session.test_type.name}</p>
+                          <p className="flex items-center gap-2 font-semibold">
+                            <ProviderLogo
+                              provider={b.session.provider}
+                              label={b.session.provider_label}
+                              height={28}
+                            />
+                            <span>{b.session.test_type.name}</span>
+                          </p>
                           <p className="text-muted text-[0.875rem]">
                             {b.session.city.name} ·{" "}
                             {formatDate(b.session.date, { weekday: "short" })}
@@ -358,9 +371,12 @@ export function BookingDetail({ id }: { id: string }) {
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-muted text-[0.9375rem]">{b.reference}</p>
-          <h1 className="text-2xl font-bold md:text-3xl">{s.test_type.name}</h1>
+          <h1 className="flex items-center gap-3 text-2xl font-bold md:text-3xl">
+            <ProviderLogo provider={s.provider} label={s.provider_label} height={36} />
+            <span>{s.test_type.name}</span>
+          </h1>
           <p className="text-muted">
-            {s.provider_label} · {s.city.name} · {s.format_label}
+            {s.city.name} · {s.format_label}
           </p>
         </div>
         <div className="text-right">

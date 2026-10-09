@@ -1,5 +1,6 @@
 "use client";
 
+import { ProviderLogo } from "../provider-logo";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { ApiError, alertApi, catalogApi } from "@/lib/api";
@@ -324,9 +325,12 @@ export function FindDates() {
                       </p>
                     </div>
                     <div className="min-w-0">
-                      <p className="font-semibold">{s.test_type.name}</p>
+                      <p className="flex items-center gap-2 font-semibold">
+                        <ProviderLogo provider={s.provider} label={s.provider_label} height={28} />
+                        <span>{s.test_type.name}</span>
+                      </p>
                       <p className="text-muted text-[0.875rem]">
-                        {s.city.name} · {s.provider_label} · {FORMAT_SHORT[s.format]}
+                        {s.city.name} · {FORMAT_SHORT[s.format]}
                       </p>
                       <p className="text-muted text-[0.8125rem]">
                         Register by {formatDate(s.registration_closes_on, { year: undefined })}
@@ -481,9 +485,12 @@ function MonthView({
                 <li key={s.id} className="py-3">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="font-semibold">{s.test_type.name}</p>
+                      <p className="flex items-center gap-2 font-semibold">
+                        <ProviderLogo provider={s.provider} label={s.provider_label} height={28} />
+                        <span>{s.test_type.name}</span>
+                      </p>
                       <p className="text-muted text-[0.8125rem]">
-                        {s.city.name} · {s.provider_label} · {FORMAT_SHORT[s.format]}
+                        {s.city.name} · {FORMAT_SHORT[s.format]}
                       </p>
                       <p className="text-muted text-[0.8125rem]">
                         {s.slot === "morning" ? "Morning" : "Afternoon"} · {formatNpr(s.fee_npr)}

@@ -1,5 +1,6 @@
 "use client";
 
+import { ProviderLogo } from "../provider-logo";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -92,12 +93,16 @@ export function Dashboard() {
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div>
                     <p className="section-title">Your next test</p>
-                    <h2 id="next-test" className="mt-1 text-2xl font-bold">
-                      {upcoming.session.test_type.name}
+                    <h2 id="next-test" className="mt-2 flex items-center gap-3 text-2xl font-bold">
+                      <ProviderLogo
+                        provider={upcoming.session.provider}
+                        label={upcoming.session.provider_label}
+                        height={36}
+                      />
+                      <span>{upcoming.session.test_type.name}</span>
                     </h2>
                     <p className="text-muted">
-                      {upcoming.session.provider_label} · {upcoming.session.city.name} ·{" "}
-                      {upcoming.session.format_label}
+                      {upcoming.session.city.name} · {upcoming.session.format_label}
                     </p>
                     <p className="mt-2 font-semibold">
                       {formatDate(upcoming.session.date, { weekday: "long" })} ·{" "}

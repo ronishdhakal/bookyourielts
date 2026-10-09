@@ -1,5 +1,6 @@
 "use client";
 
+import { ProviderLogo } from "../provider-logo";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { ApiError, authApi, bookingApi, candidateApi } from "@/lib/api";
@@ -350,9 +351,12 @@ function SessionSummary({ s }: { s: TestSession }) {
     <section className="rounded-lg bg-[#f7f8fa] p-4" aria-label="Selected date">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="font-bold">{s.test_type.name}</p>
+          <p className="flex items-center gap-2 font-bold">
+            <ProviderLogo provider={s.provider} label={s.provider_label} height={28} />
+            <span>{s.test_type.name}</span>
+          </p>
           <p className="text-muted text-[0.875rem]">
-            {s.provider_label} · {s.city.name} · {FORMAT_LABELS[s.format]}
+            {s.city.name} · {FORMAT_LABELS[s.format]}
           </p>
         </div>
         <SeatChip

@@ -1,3 +1,4 @@
+import { ProviderLogo } from "./provider-logo";
 import Link from "next/link";
 import { FORMAT_SHORT, SLOT_TIMES, formatDate, formatNpr } from "@/lib/format";
 import { appHref } from "@/lib/portal";
@@ -98,8 +99,10 @@ export function SessionList({
                 </p>
               </td>
               <td className="px-3 py-3.5">
-                <p className="font-semibold">{s.test_type.name}</p>
-                <p className="text-muted text-[0.8125rem]">{s.provider_label}</p>
+                <p className="flex items-center gap-2 font-semibold">
+                  <ProviderLogo provider={s.provider} label={s.provider_label} height={32} />
+                  <span>{s.test_type.name}</span>
+                </p>
               </td>
               <td className="px-3 py-3.5">{s.city.name}</td>
               <td className="px-3 py-3.5">{FORMAT_SHORT[s.format]}</td>
@@ -133,9 +136,12 @@ export function SessionList({
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="font-semibold">{formatDate(s.date, { weekday: "short" })}</p>
-                <p className="mt-0.5 leading-snug">{s.test_type.name}</p>
+                <p className="mt-0.5 flex items-center gap-2 leading-snug">
+                  <ProviderLogo provider={s.provider} label={s.provider_label} height={28} />
+                  <span>{s.test_type.name}</span>
+                </p>
                 <p className="text-muted text-[0.875rem]">
-                  {s.city.name} · {s.provider_label} · {FORMAT_SHORT[s.format]}
+                  {s.city.name} · {FORMAT_SHORT[s.format]}
                 </p>
               </div>
               <SeatChip status={s.seat_status} label={seatLabel(s)} />

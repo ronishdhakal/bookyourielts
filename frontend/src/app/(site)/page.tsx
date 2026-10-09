@@ -1,3 +1,4 @@
+import { ProviderLogo } from "@/components/provider-logo";
 import Link from "next/link";
 import { CtaBand } from "@/components/cta-band";
 import { DateSearch } from "@/components/date-search";
@@ -109,6 +110,17 @@ export default async function HomePage() {
             Search test dates
           </h2>
           <DateSearch cities={cityList} types={types ?? []} />
+        </div>
+      </section>
+
+      <section aria-label="Exam providers" className="container-page pt-10">
+        <div className="border-mist flex flex-wrap items-center gap-x-10 gap-y-4 border-y py-5">
+          <p className="text-muted text-[0.9375rem] font-medium">Test dates from</p>
+          <ProviderLogo provider="british_council" label="British Council" height={44} />
+          <ProviderLogo provider="idp" label="IDP" height={44} />
+          <p className="text-muted text-[0.8125rem] sm:ml-auto sm:max-w-sm">
+            Independent booking help. Not affiliated with or endorsed by either organisation.
+          </p>
         </div>
       </section>
 
