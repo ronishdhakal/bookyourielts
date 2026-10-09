@@ -28,20 +28,8 @@ const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const pad = (n: number) => String(n).padStart(2, "0");
 
 function SeatMeter({ s }: { s: TestSession }) {
-  const pct = s.seats_total ? Math.max(4, Math.round((s.seats_left / s.seats_total) * 100)) : 4;
-  return (
-    <div className="min-w-28">
-      <p className="text-[0.8125rem] font-medium">
-        {s.seats_left} of {s.seats_total} seats left
-      </p>
-      <div className="bg-mist mt-1 h-1.5 overflow-hidden rounded-full" aria-hidden>
-        <div
-          className={`h-full rounded-full ${s.seat_status === "few_left" ? "bg-crimson" : "bg-ink"}`}
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-    </div>
-  );
+  // Exact seat counts are for the team only. Students see the status.
+  return <SeatChip status={s.seat_status} />;
 }
 
 export function FindDates() {
@@ -490,10 +478,7 @@ function MonthView({
                       </p>
                       <p className="text-muted text-[0.8125rem]">{formatNpr(s.fee_npr)}</p>
                     </div>
-                    <SeatChip
-                      status={s.seat_status}
-                      label={s.seat_status === "few_left" ? `${s.seats_left} left` : undefined}
-                    />
+                    <SeatChip status={s.seat_status} />
                   </div>
                   <button
                     type="button"

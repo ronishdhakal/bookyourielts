@@ -734,7 +734,7 @@ function ChangeDate({
         </option>
         {options.map((s) => (
           <option key={s.id} value={s.id}>
-            {formatDate(s.date, { weekday: "short" })} · {s.city.name} · {s.seats_left} seats left
+            {formatDate(s.date, { weekday: "short" })} · {s.city.name}
           </option>
         ))}
       </select>

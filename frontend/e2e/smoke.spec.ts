@@ -233,7 +233,7 @@ test("find a date: filters, list and month views, and the booking panel", async 
   await page.getByLabel("Test type").selectOption("academic");
   await expect(page).toHaveURL(/test_type=academic/);
   await expect(page.getByRole("button", { name: /^Select/ }).first()).toBeVisible();
-  await expect(page.getByText(/seats left/).first()).toBeVisible();
+  await expect(page.getByText(/Available|Few seats left/).first()).toBeVisible();
 
   // Month view: pick a day, then a session from the side panel.
   await page.getByRole("tab", { name: "Month" }).click();

@@ -34,9 +34,6 @@ function Action({ s, block = false }: { s: TestSession; block?: boolean }) {
   );
 }
 
-const seatLabel = (s: TestSession) =>
-  s.seat_status === "few_left" ? `${s.seats_left} seats left` : undefined;
-
 /**
  * Open test dates: a plain data table from tablet width up, stacked rows on phones.
  * `compact` drops the deadline columns for short previews.
@@ -117,7 +114,7 @@ export function SessionList({
                 {formatNpr(s.fee_npr)}
               </td>
               <td className="px-3 py-3.5">
-                <SeatChip status={s.seat_status} label={seatLabel(s)} />
+                <SeatChip status={s.seat_status} />
               </td>
               <td className="px-5 py-3.5 text-right">
                 <Action s={s} />
@@ -141,7 +138,7 @@ export function SessionList({
                   {s.city.name} · {FORMAT_SHORT[s.format]}
                 </p>
               </div>
-              <SeatChip status={s.seat_status} label={seatLabel(s)} />
+              <SeatChip status={s.seat_status} />
             </div>
             {!compact && (
               <p className="text-muted mt-2 text-[0.8125rem]">

@@ -356,10 +356,7 @@ function SessionSummary({ s }: { s: TestSession }) {
             {s.city.name} · {FORMAT_LABELS[s.format]}
           </p>
         </div>
-        <SeatChip
-          status={s.seat_status}
-          label={s.seat_status === "few_left" ? `${s.seats_left} left` : undefined}
-        />
+        <SeatChip status={s.seat_status} />
       </div>
       <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-2 text-[0.9375rem]">
         <div>
