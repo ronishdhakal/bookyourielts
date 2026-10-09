@@ -112,3 +112,9 @@ def test_list_query_count_is_flat(api, make_session, django_assert_max_num_queri
         make_session(date=today() + timedelta(days=20 + i))
     with django_assert_max_num_queries(6):
         api.get(URL)
+
+
+def test_api_works_without_trailing_slash(api, make_session):
+    make_session()
+    res = api.get("/api/v1/sessions")
+    assert res.status_code == 200 and res.data["count"] == 1

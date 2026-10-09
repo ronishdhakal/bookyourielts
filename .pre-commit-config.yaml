@@ -1,0 +1,28 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.9
+    hooks:
+      - id: ruff
+        args: [--fix]
+        files: ^backend/
+      - id: ruff-format
+        files: ^backend/
+  - repo: local
+    hooks:
+      - id: frontend-prettier
+        name: prettier
+        entry: bash -c 'cd frontend && npx prettier --write "${@#frontend/}"' --
+        language: system
+        files: ^frontend/.*\.(ts|tsx|css|json|mjs)$
+      - id: frontend-eslint
+        name: eslint
+        entry: bash -c 'cd frontend && npx eslint .'
+        language: system
+        pass_filenames: false
+        files: ^frontend/.*\.(ts|tsx)$
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: check-added-large-files
+      - id: end-of-file-fixer
+      - id: detect-private-key

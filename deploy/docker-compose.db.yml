@@ -1,0 +1,25 @@
+# Shared PostgreSQL for both blue and green stacks.
+# Start once: docker compose -f deploy/docker-compose.db.yml --env-file .env up -d
+name: byi-shared
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      byi:
+        aliases: [db]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 5s
+      retries: 10
+networks:
+  byi:
+    name: byi
+volumes:
+  pgdata:

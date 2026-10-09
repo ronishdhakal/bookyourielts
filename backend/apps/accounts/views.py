@@ -70,14 +70,19 @@ class LogoutView(APIView):
 
 
 class MeView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     @extend_schema(responses=UserSerializer)
     def get(self, request):
+        # Anonymous visitors get 200 so the browser console stays free of expected 403 errors.
+        if not request.user.is_authenticated:
+            return Response({"authenticated": False})
         return Response(UserSerializer(request.user).data)
 
     @extend_schema(request=UserSerializer, responses=UserSerializer)
     def patch(self, request):
+        if not request.user.is_authenticated:
+            return Response({"detail": "Log in to update your details."}, status=status.HTTP_403_FORBIDDEN)
         ser = UserSerializer(request.user, data=request.data, partial=True)
         ser.is_valid(raise_exception=True)
         ser.save()

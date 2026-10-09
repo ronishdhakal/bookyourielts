@@ -48,7 +48,7 @@ def test_login_logout(api, user):
     assert ok.status_code == 200
     assert api.get(P + "me/").data["full_name"] == "Sita Sharma"
     api.post(P + "logout/")
-    assert api.get(P + "me/").status_code in (401, 403)
+    assert api.get(P + "me/").data == {"authenticated": False}
 
 
 def test_login_requires_csrf_token(user):
@@ -86,3 +86,8 @@ def test_password_reset_flow(api, user):
     user.refresh_from_db()
     assert user.check_password("An0ther-pass-456")
     assert api.post(P + "password-reset/confirm/", body, format="json").status_code == 400  # single use
+
+
+def test_post_without_trailing_slash_is_not_redirected(api):
+    res = api.post("/api/v1/auth/register", REG, format="json")
+    assert res.status_code == 201

@@ -1,0 +1,34 @@
+# One colour of the app (blue or green). Started by deploy/deploy.sh, e.g.:
+#   BACKEND_PORT=8001 FRONTEND_PORT=3001 docker compose -p byi-blue --env-file .env -f deploy/docker-compose.prod.yml up -d --build
+services:
+  backend:
+    build: ../backend
+    restart: unless-stopped
+    env_file: ../.env
+    environment:
+      DEBUG: "false"
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+    ports: ["127.0.0.1:${BACKEND_PORT}:8000"]
+    networks: [byi]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/healthz').status==200 else 1)"]
+      interval: 5s
+      retries: 20
+  frontend:
+    build:
+      context: ../frontend
+      args:
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
+    restart: unless-stopped
+    env_file: ../.env
+    environment:
+      API_ORIGIN: http://backend:8000
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports: ["127.0.0.1:${FRONTEND_PORT}:3000"]
+    networks: [byi]
+networks:
+  byi:
+    external: true
+    name: byi
