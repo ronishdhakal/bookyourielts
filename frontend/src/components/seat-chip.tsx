@@ -19,7 +19,7 @@ const LIGHT: Record<SeatStatus, string> = {
 export function SeatChip({
   status,
   label,
-  tone = "dark",
+  tone = "light",
 }: {
   status: SeatStatus;
   label?: string;

@@ -218,9 +218,7 @@ function BookingWizard({
       <div className="mx-auto max-w-2xl space-y-6" role="status">
         <div className="panel panel-pad border-ok !border-2">
           <p className="eyebrow">Booking request {booking.reference}</p>
-          <h2 className="mt-1 text-3xl font-extrabold">
-            One last step: send the message to our team
-          </h2>
+          <h2 className="mt-1 text-3xl font-bold">One last step: send the message to our team</h2>
           <p className="text-muted mt-3">
             {blocked
               ? "Your browser did not open WhatsApp automatically. Tap the button to open it."

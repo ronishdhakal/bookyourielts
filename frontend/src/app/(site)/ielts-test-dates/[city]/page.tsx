@@ -128,7 +128,7 @@ export default async function CityPage({
         </section>
 
         <section className="mt-12 max-w-3xl" aria-labelledby="city-faq">
-          <h2 id="city-faq" className="mb-4 text-3xl font-extrabold">
+          <h2 id="city-faq" className="mb-4 text-3xl font-bold">
             IELTS in {city.name}: common questions
           </h2>
           <FaqList faqs={cityFaqs} />

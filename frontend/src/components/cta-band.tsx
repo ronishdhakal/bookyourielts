@@ -11,7 +11,7 @@ export function CtaBand({
     <section className="container-page mt-20">
       <div className="border-ink flex flex-col gap-6 border-y-2 py-10 md:flex-row md:items-center md:justify-between">
         <div className="max-w-xl">
-          <h2 className="text-3xl font-extrabold">{title}</h2>
+          <h2 className="text-3xl font-bold">{title}</h2>
           <p className="text-muted mt-2 text-lg">{text}</p>
         </div>
         <div className="flex flex-col gap-3 sm:flex-row">

@@ -61,7 +61,7 @@ def test_login_requires_csrf_token(user):
 
 def test_login_is_rate_limited(api, user):
     body = {"email": "x@example.com", "password": "nope"}
-    codes = [api.post(P + "login/", body, format="json").status_code for _ in range(12)]
+    codes = [api.post(P + "login/", body, format="json").status_code for _ in range(25)]
     assert 429 in codes
 
 

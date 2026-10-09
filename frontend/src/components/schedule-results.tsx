@@ -2,7 +2,7 @@ import Link from "next/link";
 import { eventsLd } from "@/lib/seo";
 import type { Page, SessionFilters, TestSession } from "@/lib/types";
 import { JsonLd } from "./json-ld";
-import { SessionBoard } from "./session-board";
+import { SessionList } from "./session-list";
 
 export function inquireUrl(filters: SessionFilters): string {
   const sp = new URLSearchParams();
@@ -92,7 +92,7 @@ export function ScheduleResults({
         {data.count} {data.count === 1 ? "date" : "dates"}
         {pages > 1 && ` · page ${page} of ${pages}`}
       </p>
-      <SessionBoard sessions={data.results} caption={caption} />
+      <SessionList sessions={data.results} caption={caption} />
       {pages > 1 && (
         <nav aria-label="Pages" className="mt-6 flex items-center justify-between">
           {page > 1 ? (

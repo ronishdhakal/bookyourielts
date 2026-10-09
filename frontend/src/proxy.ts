@@ -11,7 +11,19 @@ const APP_HOST = APP_URL ? new URL(APP_URL).host : "";
 // Pages that exist once and are shared by both hosts.
 const SHARED = ["/login", "/register", "/forgot-password", "/reset-password", "/verify-email"];
 
+const SESSION_COOKIE = "sessionid";
+
 export function proxy(req: NextRequest) {
+  // A signed-in visitor on the marketing home goes straight to their dashboard (?site=1 opts out).
+  // Students land on the portal home; staff are sent on to the admin dashboard from there.
+  if (
+    req.nextUrl.pathname === "/" &&
+    req.cookies.has(SESSION_COOKIE) &&
+    !req.nextUrl.searchParams.has("site") &&
+    (!APP_HOST || req.headers.get("host") !== APP_HOST)
+  ) {
+    return NextResponse.redirect(new URL(APP_URL ? `${APP_URL}/` : "/portal", req.url));
+  }
   if (!APP_HOST) return NextResponse.next();
   const host = req.headers.get("host") ?? "";
   const { pathname, search } = req.nextUrl;

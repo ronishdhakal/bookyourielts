@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { authApi, bookingApi, catalogApi } from "@/lib/api";
 import { formatDate, formatNpr } from "@/lib/format";
@@ -81,6 +82,15 @@ export function ProfileCard({ user, compact = false }: { user: User; compact?: b
 
 export function PortalHome() {
   const { user } = useAuth();
+  const router = useRouter();
+  // Staff land on the admin dashboard, like students land here. ?student=1 shows this page anyway.
+  const staffRedirect =
+    !!user?.is_staff &&
+    typeof window !== "undefined" &&
+    !window.location.search.includes("student");
+  useEffect(() => {
+    if (staffRedirect) router.replace(portalHref("/manage"));
+  }, [staffRedirect, router]);
   const [bookings, setBookings] = useState<Booking[] | null>(null);
   const [bring, setBring] = useState<string[]>([]);
 
@@ -108,7 +118,7 @@ export function PortalHome() {
     };
   }, []);
 
-  if (!user) return null;
+  if (!user || staffRedirect) return null;
   const first = user.full_name.split(" ")[0];
   const today = new Date().toISOString().slice(0, 10);
   const upcoming = bookings
@@ -133,7 +143,7 @@ export function PortalHome() {
 
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-extrabold md:text-4xl">Namaste, {first}</h1>
+          <h1 className="text-3xl font-bold md:text-4xl">Namaste, {first}</h1>
           <p className="text-muted mt-1">
             Reserve a test date, track your requests and keep your details in one place.
           </p>
@@ -151,7 +161,7 @@ export function PortalHome() {
               </p>
               <h2
                 id="reserve"
-                className="font-display mt-1 text-3xl leading-tight font-extrabold md:text-4xl"
+                className="font-display mt-1 text-3xl leading-tight font-bold md:text-4xl"
               >
                 Book your IELTS test
               </h2>

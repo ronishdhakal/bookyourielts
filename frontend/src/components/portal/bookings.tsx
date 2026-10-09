@@ -230,7 +230,7 @@ export function BookingDetail({ id }: { id: string }) {
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="font-mono text-sm">{booking.reference}</p>
-              <h2 className="font-display mt-1 text-3xl font-extrabold">
+              <h2 className="font-display mt-1 text-3xl font-bold">
                 {s.provider_label} {s.test_type.name}
               </h2>
               <p className="text-muted">

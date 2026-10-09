@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useEffectEvent, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { catalogApi } from "@/lib/api";
 import { FORMAT_LABELS, SLOT_TIMES, formatDate, formatLong, formatNpr } from "@/lib/format";
 import { siteHref } from "@/lib/portal";
+import { useLoader } from "@/lib/use-loader";
 import type { ProviderCode, TestFormat, TestSession, TestType } from "@/lib/types";
 import { validateDob, validateEmail, validatePassportFile, validatePhone } from "@/lib/validate";
 import { SeatChip } from "../seat-chip";
@@ -12,32 +13,10 @@ import { FormError, TextField } from "../text-field";
 import { DateCalendar } from "./calendar";
 import { PROVIDERS, type DetailsForm, type Prefs } from "./wizard-types";
 
-/** Run an async loader whenever `key` changes. Loading is derived (no state set inside the effect body). */
-function useLoader<T>(key: string | null, load: (signal: AbortSignal) => Promise<T>) {
-  const [state, setState] = useState<{ key: string; data: T | null; failed: boolean } | null>(null);
-  // Always calls the latest `load` without making it an effect dependency.
-  const run = useEffectEvent(load);
-  useEffect(() => {
-    if (!key) return;
-    const ctl = new AbortController();
-    run(ctl.signal).then(
-      (data) => !ctl.signal.aborted && setState({ key, data, failed: false }),
-      () => !ctl.signal.aborted && setState({ key, data: null, failed: true }),
-    );
-    return () => ctl.abort();
-  }, [key]);
-  const ready = state?.key === key;
-  return {
-    data: ready ? state.data : null,
-    loading: !!key && !ready,
-    failed: ready && state.failed,
-  };
-}
-
 export function StepHeading({ title, lede }: { title: string; lede?: string }) {
   return (
     <div className="mb-6">
-      <h2 className="text-2xl font-extrabold md:text-3xl">{title}</h2>
+      <h2 className="text-2xl font-bold md:text-3xl">{title}</h2>
       {lede && <p className="text-muted mt-1.5 max-w-xl">{lede}</p>}
     </div>
   );
@@ -224,7 +203,7 @@ export function PrefsStep({
                 <div key={i} className="skeleton-light h-20 rounded-lg" />
               ))}
             </div>
-          ) : avail.failed ? (
+          ) : !!avail.error ? (
             <FormError message="We could not load the cities. Please try again." />
           ) : avail.data && avail.data.length > 0 ? (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -337,7 +316,7 @@ export function DateStep({
           loading={list.loading}
         />
         <div aria-live="polite">
-          {list.failed && <FormError message="We could not load the dates. Please try again." />}
+          {!!list.error && <FormError message="We could not load the dates. Please try again." />}
           {!date ? (
             <div className="border-mist text-muted flex h-full min-h-40 items-center justify-center rounded-lg border-2 border-dashed p-6 text-center">
               {sessions.length === 0 && !list.loading

@@ -10,7 +10,7 @@ export default async function BookPage({
   const { session } = await searchParams;
   return (
     <>
-      <h1 className="mb-6 text-3xl font-extrabold md:text-4xl">Book an exam</h1>
+      <h1 className="mb-6 text-3xl font-bold md:text-4xl">Book an exam</h1>
       <BookingWizardLoader sessionId={session} />
     </>
   );

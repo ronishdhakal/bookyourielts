@@ -1,5 +1,22 @@
 /** Browser-side API client. Calls go to /api/... on our own origin (proxied to Django). */
-import type { Booking, City, Inquiry, Page, SiteInfo, TestSession, TestType, User } from "./types";
+import type {
+  Booking,
+  BookingStatus,
+  City,
+  Inquiry,
+  InquiryStatus,
+  Page,
+  SiteInfo,
+  StaffBooking,
+  StaffInquiry,
+  StaffMeta,
+  StaffSession,
+  StaffSettings,
+  Stats,
+  TestSession,
+  TestType,
+  User,
+} from "./types";
 
 export class ApiError extends Error {
   status: number;
@@ -135,4 +152,39 @@ export const catalogApi = {
     for (const [k, v] of Object.entries(params)) if (v) sp.set(k, v);
     return api<Page<TestSession>>(`/sessions/?${sp.toString()}`, { signal });
   },
+};
+
+function query(params: Record<string, string | number | undefined>) {
+  const sp = new URLSearchParams();
+  for (const [k, v] of Object.entries(params))
+    if (v !== undefined && v !== "") sp.set(k, String(v));
+  const s = sp.toString();
+  return s ? `?${s}` : "";
+}
+
+type Params = Record<string, string | number | undefined>;
+
+export const manageApi = {
+  stats: () => api<Stats>("/manage/stats/"),
+  meta: () => api<StaffMeta>("/manage/meta/"),
+  bookings: (p: Params, signal?: AbortSignal) =>
+    api<Page<StaffBooking>>(`/manage/bookings/${query(p)}`, { signal }),
+  booking: (id: number | string) => api<StaffBooking>(`/manage/bookings/${id}/`),
+  updateBooking: (id: number, body: { status?: BookingStatus; admin_notes?: string }) =>
+    api<StaffBooking>(`/manage/bookings/${id}/`, { method: "PATCH", body }),
+  inquiries: (p: Params, signal?: AbortSignal) =>
+    api<Page<StaffInquiry>>(`/manage/inquiries/${query(p)}`, { signal }),
+  updateInquiry: (id: number, body: { status?: InquiryStatus; admin_notes?: string }) =>
+    api<StaffInquiry>(`/manage/inquiries/${id}/`, { method: "PATCH", body }),
+  sessions: (p: Params, signal?: AbortSignal) =>
+    api<Page<StaffSession>>(`/manage/sessions/${query(p)}`, { signal }),
+  session: (id: number | string) => api<StaffSession>(`/manage/sessions/${id}/`),
+  createSession: (body: Partial<StaffSession>) =>
+    api<StaffSession>("/manage/sessions/", { method: "POST", body }),
+  updateSession: (id: number, body: Partial<StaffSession>) =>
+    api<StaffSession>(`/manage/sessions/${id}/`, { method: "PATCH", body }),
+  deleteSession: (id: number) => api<void>(`/manage/sessions/${id}/`, { method: "DELETE" }),
+  settings: () => api<StaffSettings>("/manage/settings/"),
+  updateSettings: (body: Partial<StaffSettings>) =>
+    api<StaffSettings>("/manage/settings/", { method: "PATCH", body }),
 };

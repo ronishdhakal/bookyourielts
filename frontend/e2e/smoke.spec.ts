@@ -1,5 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
+const ADMIN = { email: "admin@example.com", password: "admin12345" }; // created by `seed_demo --admin` (dev only)
+
 const PASSWORD = "Str0ng-pass-123";
 
 function uniqueUser() {
@@ -27,6 +29,13 @@ async function fillDetails(
   await page.getByLabel(/I confirm these details/).check();
 }
 
+/** Open an admin section. On phones the navigation is behind a Menu button. */
+async function adminNav(page: Page, name: RegExp | string) {
+  const menu = page.getByRole("button", { name: "Menu" });
+  if (await menu.isVisible()) await menu.click();
+  await page.getByRole("navigation", { name: "Admin" }).getByRole("link", { name }).click();
+}
+
 test.beforeEach(async ({ context }) => {
   // Never hit the real WhatsApp during tests.
   await context.route("https://wa.me/**", (route) =>
@@ -36,9 +45,10 @@ test.beforeEach(async ({ context }) => {
 
 test("home page leads with the booking, not with WhatsApp", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("IELTS booking in Nepal");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("IELTS test date in Nepal");
   await expect(page.getByRole("heading", { level: 1 })).not.toContainText(/whatsapp/i);
-  await expect(page.getByRole("heading", { name: "Next open dates" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Upcoming test dates" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Find your test date" })).toBeVisible();
   await expect(page.getByText("independent service").first()).toBeVisible();
   await expect(page.getByRole("link", { name: /^Book this date/ }).first()).toBeVisible();
   await expect(page.locator("section").first()).not.toContainText(/whatsapp/i);
@@ -209,4 +219,92 @@ test("a student can withdraw an unconfirmed request", async ({ page }) => {
   await page.getByRole("button", { name: "Withdraw request" }).click();
   await page.getByRole("button", { name: "Yes, withdraw" }).click();
   await expect(page.getByText("Cancelled").first()).toBeVisible();
+});
+
+test("a signed-in student skips the marketing home and lands on their dashboard", async ({
+  page,
+}) => {
+  await page.goto("/register?next=%2Fportal");
+  await fillRegistration(page, uniqueUser());
+  await expect(page).toHaveURL(/\/portal$/);
+  await expect(page.getByRole("heading", { name: /^Namaste, / })).toBeVisible();
+
+  await page.goto("/");
+  await expect(page).toHaveURL(/\/portal$/);
+  // The public site stays reachable on purpose.
+  await page.goto("/?site=1");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("IELTS test date in Nepal");
+  // Students cannot open the admin dashboard.
+  await page.goto("/portal/manage");
+  await expect(page).toHaveURL(/\/portal$/);
+});
+
+test("staff sign in to the admin dashboard and manage dates and requests", async ({ page }) => {
+  await page.goto("/login");
+  await page.waitForLoadState("networkidle");
+  await page.getByLabel("Email").fill(ADMIN.email);
+  await page.getByLabel("Password").fill(ADMIN.password);
+  await page.getByRole("button", { name: "Log in" }).click();
+
+  await expect(page).toHaveURL(/\/portal\/manage$/);
+  await expect(page.getByRole("heading", { name: "Overview", level: 1 })).toBeVisible();
+  await expect(page.getByLabel("Key numbers")).toContainText("Awaiting confirmation");
+
+  await adminNav(page, /^Test dates/);
+  await expect(page.getByRole("heading", { name: "Test dates", level: 1 })).toBeVisible();
+  await page.getByRole("link", { name: "Add a date" }).click();
+  await page.getByRole("button", { name: "Add date" }).click();
+  await expect(page.getByText("Choose the test date.")).toBeVisible();
+  await expect(page.getByText("Choose a city.")).toBeVisible();
+
+  await adminNav(page, /^Booking requests/);
+  await expect(page.getByRole("heading", { name: "Booking requests", level: 1 })).toBeVisible();
+  await page.getByRole("tab", { name: /^Confirmed/ }).click();
+  await expect(page).toHaveURL(/status=confirmed/);
+
+  await adminNav(page, /^Inquiries/);
+  await expect(page.getByRole("heading", { name: "Inquiries", level: 1 })).toBeVisible();
+  await adminNav(page, /^Settings/);
+  await expect(page.getByLabel("WhatsApp number")).not.toHaveValue("");
+});
+
+test("staff confirm a request from the dashboard", async ({ page, browser }) => {
+  // A student makes a request...
+  const sctx = await browser.newContext();
+  const sp = await sctx.newPage();
+  await sp.goto("/ielts-test-dates?city=chitwan");
+  await sp
+    .getByRole("link", { name: /^Book this date/ })
+    .first()
+    .click();
+  await sp.getByRole("link", { name: "Create a free account" }).click();
+  await fillRegistration(sp, uniqueUser());
+  await fillDetails(sp, { province: "Bagmati", district: "Chitwan", city: "Bharatpur" });
+  await sp.getByRole("button", { name: "Continue" }).click();
+  await sp.getByLabel(/I agree to the/).check();
+  await sctx.route("https://wa.me/**", (r) => r.fulfill({ body: "ok" }));
+  const popup = sp.context().waitForEvent("page");
+  await sp.getByRole("button", { name: "Confirm and continue on WhatsApp" }).click();
+  await (await popup).close();
+  const reference =
+    (await sp.getByText(/Booking request BYI-/).textContent())?.match(/BYI-\d{4}-\d{6}/)?.[0] ?? "";
+  expect(reference).not.toBe("");
+  await sctx.close();
+
+  // ...and staff find it and confirm it.
+  await page.goto("/login");
+  await page.waitForLoadState("networkidle");
+  await page.getByLabel("Email").fill(ADMIN.email);
+  await page.getByLabel("Password").fill(ADMIN.password);
+  await page.getByRole("button", { name: "Log in" }).click();
+  await expect(page).toHaveURL(/\/portal\/manage$/);
+  await page.goto(`/portal/manage/bookings?q=${reference}`);
+  await page.getByRole("link", { name: reference }).first().click();
+  await expect(page.getByText("Awaiting confirmation").first()).toBeVisible();
+  await page.getByRole("textbox", { name: "Internal notes" }).fill("Paid by cash");
+  await page.getByRole("button", { name: "Save notes" }).click();
+  await expect(page.getByText("Saved")).toBeVisible();
+  await page.getByRole("button", { name: /^Confirm booking/ }).click();
+  await expect(page.getByText("Confirmed").first()).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Confirm booking/ })).toHaveCount(0);
 });

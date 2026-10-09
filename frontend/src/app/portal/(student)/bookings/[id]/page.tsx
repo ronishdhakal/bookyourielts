@@ -15,7 +15,7 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
           ← My bookings
         </Link>
       </p>
-      <h1 className="mb-6 text-3xl font-extrabold md:text-4xl">Booking details</h1>
+      <h1 className="mb-6 text-3xl font-bold md:text-4xl">Booking details</h1>
       <BookingDetail id={id} />
     </>
   );

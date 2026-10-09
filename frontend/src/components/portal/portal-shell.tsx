@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { catalogApi } from "@/lib/api";
+import { authApi, catalogApi } from "@/lib/api";
 import { APP_URL, portalHref, siteHref } from "@/lib/portal";
 import type { SiteInfo } from "@/lib/types";
 import { useAuth } from "../auth-provider";
@@ -36,7 +36,10 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
       const here = APP_URL
         ? window.location.href
         : window.location.pathname + window.location.search;
-      window.location.replace(`/login?next=${encodeURIComponent(here)}`);
+      // Clear a stale session cookie first, otherwise the marketing site would keep sending the visitor back.
+      authApi
+        .logout()
+        .finally(() => window.location.replace(`/login?next=${encodeURIComponent(here)}`));
     }
   }, [loading, user]);
 
@@ -59,7 +62,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
     <div className="bg-paper min-h-screen pb-24 md:pb-0">
       <div className="bg-spruce text-board text-[0.8125rem]">
         <div className="container-page flex h-9 items-center justify-between gap-4">
-          <a href={siteHref("/")} className="hover:underline">
+          <a href={siteHref("/?site=1")} className="hover:underline">
             ← bookyourielts.com
           </a>
           {site?.contact_phone && (
@@ -114,6 +117,15 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
                 className="panel absolute right-0 mt-2 w-56 py-2 shadow-lg"
                 onClick={() => setMenu(false)}
               >
+                {user.is_staff && (
+                  <Link
+                    role="menuitem"
+                    href={portalHref("/manage")}
+                    className="block px-4 py-2.5 font-semibold hover:bg-black/5"
+                  >
+                    Admin dashboard
+                  </Link>
+                )}
                 <Link
                   role="menuitem"
                   href={portalHref("/profile")}

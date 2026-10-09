@@ -16,7 +16,7 @@ export default function NotFound() {
       </header>
       <main id="main" className="container-page py-20 md:py-28">
         <p className="eyebrow">Error 404</p>
-        <h1 className="mt-3 max-w-2xl text-5xl font-extrabold md:text-7xl">
+        <h1 className="mt-3 max-w-2xl text-5xl font-bold md:text-7xl">
           We could not find that page
         </h1>
         <p className="text-muted mt-5 max-w-lg text-lg">

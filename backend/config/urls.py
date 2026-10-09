@@ -6,6 +6,7 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from apps.bookings import api as bookings
 from apps.catalog import api as catalog
 from apps.core import api as core
+from apps.core import staff_api as staff
 
 api_v1 = [
     path("csrf/", core.CsrfView.as_view()),
@@ -24,6 +25,16 @@ api_v1 = [
     path("regions/", core.RegionsView.as_view()),
     path("inquiries/", bookings.InquiryCreateView.as_view()),
     path("inquiries/mine/", bookings.MyInquiryListView.as_view()),
+    path("manage/stats/", staff.StatsView.as_view()),
+    path("manage/meta/", staff.MetaView.as_view()),
+    path("manage/settings/", staff.StaffSettingsView.as_view()),
+    path("manage/bookings/", staff.StaffBookingList.as_view()),
+    path("manage/bookings/<int:pk>/", staff.StaffBookingDetail.as_view()),
+    path("manage/bookings/<int:pk>/passport/<str:side>/", staff.StaffPassportView.as_view()),
+    path("manage/inquiries/", staff.StaffInquiryList.as_view()),
+    path("manage/inquiries/<int:pk>/", staff.StaffInquiryDetail.as_view()),
+    path("manage/sessions/", staff.StaffSessionList.as_view()),
+    path("manage/sessions/<int:pk>/", staff.StaffSessionDetail.as_view()),
     path("schema/", SpectacularAPIView.as_view(), name="schema"),
     path("docs/", SpectacularSwaggerView.as_view(url_name="schema")),
 ]

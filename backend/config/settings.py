@@ -176,7 +176,7 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
         "anon": "120/min",
         "user": "240/min",
-        "auth": "10/min",
+        "auth": env("AUTH_RATE", "20/min"),
         "inquiry": env("INQUIRY_RATE", "5/hour"),
         "email": "5/hour",
     },

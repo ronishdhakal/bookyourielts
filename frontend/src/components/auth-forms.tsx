@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { ApiError, authApi } from "@/lib/api";
 import { goNext } from "@/lib/nav";
+import { go } from "@/lib/portal";
 import { validateEmail, validatePassword, validatePhone } from "@/lib/validate";
 import { useAuth } from "./auth-provider";
 import { FormError, TextField } from "./text-field";
@@ -12,6 +13,13 @@ import { FormError, TextField } from "./text-field";
 function fieldErrors(e: unknown): Record<string, string> {
   if (!(e instanceof ApiError)) return {};
   return Object.fromEntries(Object.entries(e.fields).map(([k, v]) => [k, v[0] ?? ""]));
+}
+
+/** Someone who is already signed in has no use for these pages. */
+function useSignedInRedirect(user: unknown, loading: boolean, next: string) {
+  useEffect(() => {
+    if (!loading && user) go(next);
+  }, [loading, user, next]);
 }
 
 function useSubmit() {
@@ -22,7 +30,8 @@ function useSubmit() {
 
 export function LoginForm({ next }: { next: string }) {
   const router = useRouter();
-  const { setUser } = useAuth();
+  const { user, loading, setUser } = useAuth();
+  useSignedInRedirect(user, loading, next);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errs, setErrs] = useState<Record<string, string>>({});
@@ -96,7 +105,8 @@ export function LoginForm({ next }: { next: string }) {
 
 export function RegisterForm({ next }: { next: string }) {
   const router = useRouter();
-  const { setUser } = useAuth();
+  const { user, loading, setUser } = useAuth();
+  useSignedInRedirect(user, loading, next);
   const [v, setV] = useState({ full_name: "", phone: "", email: "", password: "" });
   const [errs, setErrs] = useState<Record<string, string>>({});
   const { busy, setBusy, error, setError } = useSubmit();

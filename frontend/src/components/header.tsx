@@ -33,10 +33,10 @@ export function Header() {
   ) : user ? (
     <>
       <Link
-        href={appHref("/bookings")}
+        href={appHref(user.is_staff ? "/manage" : "/")}
         className="font-semibold underline-offset-4 hover:underline"
       >
-        My bookings
+        {user.is_staff ? "Admin dashboard" : "My dashboard"}
       </Link>
       <button
         type="button"
@@ -55,7 +55,7 @@ export function Header() {
         Log in
       </Link>
       <Link href="/ielts-test-dates" className="btn btn-primary btn-sm">
-        Book IELTS
+        Find a date
       </Link>
     </>
   );
@@ -63,7 +63,11 @@ export function Header() {
   return (
     <header className="border-mist bg-paper/95 sticky top-0 z-40 border-b backdrop-blur">
       <div className="container-page flex h-16 items-center justify-between gap-4">
-        <Link href="/" aria-label="bookyourielts.com home" className="shrink-0">
+        <Link
+          href={user ? "/?site=1" : "/"}
+          aria-label="bookyourielts.com home"
+          className="shrink-0"
+        >
           <Logo />
         </Link>
 

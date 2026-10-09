@@ -91,7 +91,7 @@ runs backend tests, frontend lint/typecheck and the Playwright smoke tests.
 Everything is configured through the environment; see [`.env.example`](.env.example) for the full list with comments.
 The ones you must set in production: `SECRET_KEY`, `ALLOWED_HOSTS`, `FRONTEND_URL`, `CORS_ALLOWED_ORIGINS`,
 `CSRF_TRUSTED_ORIGINS`, the `POSTGRES_*` values, `ADMIN_WHATSAPP_NUMBER` and your SMTP settings (`EMAIL_*`).
-`DEBUG` must be `false`. The WhatsApp number can later be changed in the admin without a redeploy.
+`DEBUG` must be `false`. `AUTH_RATE` (default 20/min) and `INQUIRY_RATE` (default 5/hour) tune the rate limits per visitor. The WhatsApp number can later be changed in the admin without a redeploy.
 
 ## Running the business from the admin
 
@@ -121,6 +121,30 @@ test types, sessions (filters: `city`, `test_type`, `test_format`, `month=YYYY-M
 site settings. Authenticated endpoints for bookings and the student's own inquiries. Guests can create inquiries
 (rate limited to 5 per hour). Login, register and reset endpoints are rate limited and enforce CSRF even for anonymous users.
 Nepali mobile numbers are accepted in common formats (`98XXXXXXXX`, `+977 98XXXXXXXX`, `0097798...`) and stored as `+9779XXXXXXXXX`.
+
+## Signing in: where people land
+
+- A signed-in visitor who opens the marketing home page is redirected to their dashboard: students to the portal home,
+  staff on to the admin dashboard. `?site=1` opts out (the portal and admin link to the public site that way).
+- Logging in lands on the same place unless the visitor was sent to log in from a specific page, in which case they return there.
+- A stale session cookie is cleared automatically, so an expired login never traps someone away from the home page.
+
+## Admin dashboard (staff)
+
+Staff accounts (`is_staff`) get a dashboard at `users.bookyourielts.com/manage` (`/portal/manage` in development), backed by
+a staff-only API under `/api/v1/manage/`:
+
+- **Overview**: requests awaiting confirmation, new inquiries, confirmed bookings, open dates, a 14-day request chart, seats
+  taken over the next 30 days, dates running low and the latest requests.
+- **Booking requests**: filter by status, city, provider and search by name, phone, email or reference. Open one to see
+  the candidate, passport images (staff only), confirm or cancel it (seat counts stay correct and overbooking is refused),
+  and keep internal notes.
+- **Inquiries**: triage as new, contacted or closed, with notes and a one-click message to the student.
+- **Test dates**: add, edit, show or hide, delete (only if there are no requests; otherwise hide). Deadlines fill in automatically.
+  **Bulk create** and everything else still live in the Django admin, linked from the sidebar.
+- **Settings**: WhatsApp number and message templates, contact details, low-seat threshold, announcement banner and disclaimer.
+
+Create a staff user with `python manage.py createsuperuser` (or tick *staff* on a user in the Django admin).
 
 ## Passport uploads and privacy
 

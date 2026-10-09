@@ -130,3 +130,111 @@ export interface SessionFilters {
   page?: string;
   page_size?: string;
 }
+
+/* ---- Staff dashboard ---- */
+export interface Stats {
+  bookings: { initiated: number; confirmed: number; cancelled: number; total: number };
+  new_inquiries: number;
+  open_dates: number;
+  hidden_dates: number;
+  seats_next_30_days: { total: number; booked: number };
+  students: number;
+  per_day: { date: string; count: number }[];
+  low_seat_dates: TestSession[];
+  recent_bookings: {
+    id: number;
+    reference: string;
+    status: BookingStatus;
+    student: string;
+    test: string;
+    city: string;
+    date: string;
+    created_at: string;
+  }[];
+}
+
+export interface StaffBooking {
+  id: number;
+  reference: string;
+  status: BookingStatus;
+  status_label: string;
+  created_at: string;
+  whatsapp_clicked_at: string | null;
+  user: { id: number; email: string; full_name: string; phone: string };
+  session: TestSession;
+  examinee: Examinee;
+  candidate_name: string;
+  candidate_phone: string;
+  candidate_email: string;
+  date_of_birth: string | null;
+  province: string;
+  district: string;
+  municipality: string;
+  has_passport_front: boolean;
+  has_passport_back: boolean;
+  admin_notes: string;
+  whatsapp_url: string;
+}
+
+export interface StaffInquiry {
+  id: number;
+  name: string;
+  phone: string;
+  email: string;
+  preferred_city_name: string;
+  test_type_name: string;
+  format: TestFormat | "";
+  format_label: string;
+  preferred_month: string;
+  message: string;
+  status: InquiryStatus;
+  status_label: string;
+  admin_notes: string;
+  created_at: string;
+}
+
+export interface StaffSession {
+  id: number;
+  date: string;
+  weekday: string;
+  provider: ProviderCode;
+  provider_label: string;
+  slot: "morning" | "afternoon";
+  city: number;
+  city_name: string;
+  venue: number | null;
+  venue_name: string;
+  test_type: number;
+  test_type_name: string;
+  format: TestFormat;
+  format_label: string;
+  fee_npr: number;
+  seats_total: number;
+  seats_booked: number;
+  seat_status: SeatStatus;
+  registration_closes_on: string;
+  results_date: string;
+  speaking_note: string;
+  is_visible: boolean;
+  notes: string;
+  booking_count: number;
+}
+
+export interface StaffMeta {
+  cities: { id: number; name: string; venues: { id: number; name: string }[] }[];
+  test_types: { id: number; name: string; is_ukvi: boolean }[];
+  providers: { value: ProviderCode; label: string }[];
+  formats: { value: TestFormat; label: string }[];
+}
+
+export interface StaffSettings {
+  whatsapp_number: string;
+  booking_message_template: string;
+  inquiry_message_template: string;
+  contact_email: string;
+  contact_phone: string;
+  office_address: string;
+  low_seat_threshold: number;
+  announcement: string;
+  footer_disclaimer: string;
+}

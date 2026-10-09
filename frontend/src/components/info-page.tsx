@@ -32,7 +32,7 @@ export function InfoPage({
         <div className="prose-page">{children}</div>
         {faqs && faqs.length > 0 && (
           <section className="mt-16 max-w-3xl" aria-labelledby="faq">
-            <h2 id="faq" className="mb-4 text-3xl font-extrabold">
+            <h2 id="faq" className="mb-4 text-3xl font-bold">
               {faqTitle}
             </h2>
             <FaqList faqs={faqs} />

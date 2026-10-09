@@ -71,6 +71,8 @@ jobs:
       DATABASE_URL: postgres://bookyourielts:bookyourielts@localhost:5432/bookyourielts
       ADMIN_WHATSAPP_NUMBER: "9779812345678"
       API_ORIGIN: http://localhost:8000
+      AUTH_RATE: 500/min
+      INQUIRY_RATE: 500/hour
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
