@@ -1,23 +1,28 @@
 @import "tailwindcss";
 
+/*
+ * Brand: red #c80530, near-black and greys. No other accent colours.
+ * Token names are kept from earlier iterations so existing components pick up the new palette.
+ */
 @theme {
-  --color-paper: #f2f4f0;
-  --color-ink: #0e1f1c;
-  --color-spruce: #123a33;
-  --color-spruce-2: #1c4d44;
-  --color-crimson: #c8102e;
-  --color-crimson-dark: #a30d25;
-  --color-marigold: #f0b33a;
-  --color-mist: #d9dfd8;
-  --color-muted: #4a5c57;
-  --color-board: #e8f0ec;
-  --color-ok: #0f6b4b;
-  --color-ok-light: #5fd3a6;
-  --color-white-ish: #fbfcfa;
+  --color-paper: #f1f3f5; /* app background */
+  --color-ink: #1d2127;
+  --color-spruce: #1d2127; /* dark surfaces: utility bar, footer */
+  --color-spruce-2: #2b3139;
+  --color-crimson: #c80530;
+  --color-crimson-dark: #a30426;
+  --color-crimson-tint: #fdeef1;
+  --color-marigold: #c80530; /* legacy name, now the brand red */
+  --color-mist: #dfe3e8; /* borders */
+  --color-muted: #5b6470;
+  --color-board: #f1f3f5; /* text on dark */
+  --color-ok: #1d2127;
+  --color-ok-light: #cfd4da;
+  --color-white-ish: #ffffff;
 
-  --font-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
-  --font-sans: var(--font-instrument), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-plex-mono), ui-monospace, SFMono-Regular, monospace;
+  --font-display: var(--font-sans);
+  --font-sans: var(--font-public-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-public-sans), ui-sans-serif, system-ui, sans-serif;
 
   --breakpoint-xs: 30rem;
 }
@@ -32,40 +37,40 @@
     color: var(--color-ink);
     font-family: var(--font-sans);
     font-size: 1rem;
-    line-height: 1.6;
+    line-height: 1.55;
     -webkit-font-smoothing: antialiased;
+    font-variant-numeric: tabular-nums;
   }
   h1,
   h2,
   h3 {
-    font-family: var(--font-display);
-    letter-spacing: -0.02em;
-    line-height: 1.08;
+    letter-spacing: -0.015em;
+    line-height: 1.15;
     text-wrap: balance;
   }
   p {
     text-wrap: pretty;
   }
   :focus-visible {
-    outline: 3px solid var(--color-marigold);
+    outline: 2px solid var(--color-crimson);
     outline-offset: 2px;
-    box-shadow: 0 0 0 5px var(--color-ink);
     border-radius: 4px;
   }
   .on-dark :focus-visible {
-    box-shadow: 0 0 0 5px var(--color-spruce);
+    outline-color: #fff;
   }
   ::selection {
-    background: var(--color-marigold);
-    color: var(--color-ink);
+    background: var(--color-crimson);
+    color: #fff;
   }
 }
 
 @layer components {
+  /* Wide layout on desktop: content stretches to 1440px with generous side margins. */
   .container-page {
     margin-inline: auto;
     width: 100%;
-    max-width: 75rem;
+    max-width: 90rem;
     padding-inline: 1rem;
   }
   @media (min-width: 48rem) {
@@ -73,31 +78,34 @@
       padding-inline: 2rem;
     }
   }
+  @media (min-width: 80rem) {
+    .container-page {
+      padding-inline: 3.5rem;
+    }
+  }
 
   .btn {
     display: inline-flex;
-    min-height: 3rem;
+    min-height: 2.875rem;
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
     border-radius: 0.375rem;
-    border: 2px solid transparent;
-    padding: 0.5rem 1.25rem;
+    border: 1.5px solid transparent;
+    padding: 0.5rem 1.375rem;
     font-weight: 600;
+    font-size: 0.9375rem;
     line-height: 1.2;
     text-align: center;
     cursor: pointer;
     transition:
       background-color 0.15s,
       color 0.15s,
-      transform 0.1s;
-  }
-  .btn:active {
-    transform: translateY(1px);
+      border-color 0.15s;
   }
   .btn:disabled,
   .btn[aria-disabled="true"] {
-    opacity: 0.55;
+    opacity: 0.5;
     cursor: not-allowed;
   }
   .btn-primary {
@@ -107,35 +115,58 @@
   .btn-primary:hover:not(:disabled) {
     background: var(--color-crimson-dark);
   }
+  .btn-dark {
+    background: var(--color-ink);
+    color: #fff;
+  }
+  .btn-dark:hover:not(:disabled) {
+    background: var(--color-spruce-2);
+  }
   .btn-outline {
-    border-color: var(--color-ink);
+    border-color: #c4cad2;
     color: var(--color-ink);
-    background: transparent;
+    background: #fff;
   }
   .btn-outline:hover:not(:disabled) {
-    background: var(--color-ink);
-    color: var(--color-paper);
+    border-color: var(--color-ink);
   }
   .btn-sm {
-    min-height: 2.5rem;
-    padding: 0.35rem 1rem;
-    font-size: 0.9375rem;
+    min-height: 2.375rem;
+    padding: 0.3rem 1rem;
+    font-size: 0.875rem;
   }
 
   .field-label {
     display: block;
     margin-bottom: 0.375rem;
-    font-weight: 600;
-    font-size: 0.9375rem;
+    font-weight: 500;
+    font-size: 0.875rem;
+    color: #3a414c;
   }
   .field-input {
     width: 100%;
-    min-height: 3rem;
-    border: 1.5px solid #8a9a95;
+    min-height: 2.875rem;
+    border: 1px solid #c4cad2;
     border-radius: 0.375rem;
-    background: var(--color-white-ish);
+    background: #fff;
     padding: 0.5rem 0.75rem;
     color: var(--color-ink);
+    font-size: 0.9375rem;
+  }
+  .field-input::placeholder {
+    color: #8a929d;
+  }
+  .field-input:hover:not(:disabled) {
+    border-color: #9aa2ad;
+  }
+  .field-input:focus {
+    border-color: var(--color-crimson);
+    outline: none;
+    box-shadow: 0 0 0 3px rgb(200 5 48 / 0.15);
+  }
+  .field-input:disabled {
+    background: #f1f3f5;
+    color: #8a929d;
   }
   .field-input[aria-invalid="true"] {
     border-color: var(--color-crimson);
@@ -143,41 +174,107 @@
   .field-error {
     margin-top: 0.375rem;
     color: var(--color-crimson);
-    font-size: 0.9375rem;
+    font-size: 0.8125rem;
     font-weight: 500;
   }
   .field-hint {
     margin-top: 0.375rem;
     color: var(--color-muted);
-    font-size: 0.875rem;
+    font-size: 0.8125rem;
   }
 
   .eyebrow {
-    font-family: var(--font-mono);
     font-size: 0.8125rem;
-    letter-spacing: 0.04em;
+    font-weight: 600;
+    color: var(--color-crimson);
+  }
+
+  /* White surface on the grey app background. */
+  .panel {
+    background: #fff;
+    border: 1px solid var(--color-mist);
+    border-radius: 0.75rem;
+  }
+  .panel-pad {
+    padding: 1.25rem;
+  }
+  @media (min-width: 48rem) {
+    .panel-pad {
+      padding: 2rem;
+    }
+  }
+  .section-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
     color: var(--color-muted);
+  }
+
+  /* Selectable option (provider, session). */
+  .choice {
+    display: block;
+    cursor: pointer;
+    border: 1px solid #c4cad2;
+    border-radius: 0.5rem;
+    background: #fff;
+    padding: 1rem 1.125rem;
+    transition:
+      border-color 0.15s,
+      box-shadow 0.15s;
+  }
+  .choice:hover {
+    border-color: var(--color-ink);
+  }
+  .choice[data-selected="true"] {
+    border-color: var(--color-crimson);
+    box-shadow: inset 0 0 0 1px var(--color-crimson);
+  }
+  .choice:has(input:focus-visible) {
+    outline: 2px solid var(--color-crimson);
+    outline-offset: 2px;
+  }
+
+  /* Form rows with the label on the left, as in the booking forms. */
+  .form-row {
+    display: grid;
+    gap: 0.75rem 2.5rem;
+    padding-block: 1.5rem;
+  }
+  .form-row + .form-row {
+    border-top: 1px solid var(--color-mist);
+  }
+  @media (min-width: 64rem) {
+    .form-row {
+      grid-template-columns: 13rem minmax(0, 1fr);
+    }
+  }
+  .form-row-label {
+    font-weight: 600;
+    padding-top: 0.5rem;
   }
 
   /* Long-form copy on information pages */
   .prose-page {
-    max-width: 42rem;
+    max-width: 46rem;
   }
   .prose-page h2 {
-    margin-top: 3rem;
+    margin-top: 2.75rem;
     margin-bottom: 0.75rem;
-    font-size: clamp(1.5rem, 1.2rem + 1.2vw, 2rem);
+    font-size: clamp(1.375rem, 1.15rem + 1vw, 1.75rem);
+    font-weight: 700;
   }
   .prose-page h3 {
     margin-top: 2rem;
     margin-bottom: 0.5rem;
-    font-size: 1.25rem;
+    font-size: 1.125rem;
+    font-weight: 700;
   }
   .prose-page p,
   .prose-page ul,
   .prose-page ol {
     margin-bottom: 1rem;
-    font-size: 1.0625rem;
+    font-size: 1rem;
   }
   .prose-page ul {
     list-style: disc;
@@ -214,22 +311,6 @@
   }
 }
 
-/* Departure-board entrance: one orchestrated moment, transform + opacity only. */
-@keyframes board-in {
-  from {
-    opacity: 0;
-    transform: translateY(-6px) rotateX(40deg);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-.board-row-in {
-  animation: board-in 0.4s cubic-bezier(0.2, 0.7, 0.2, 1) both;
-  animation-delay: calc(var(--i, 0) * 70ms + 150ms);
-}
-
 @keyframes shimmer {
   to {
     background-position: -200% 0;
@@ -241,7 +322,7 @@
   animation: shimmer 1.4s linear infinite;
 }
 .skeleton-light {
-  background: linear-gradient(90deg, #0e1f1c10 25%, #0e1f1c1c 50%, #0e1f1c10 75%);
+  background: linear-gradient(90deg, #1d212710 25%, #1d21271c 50%, #1d212710 75%);
   background-size: 200% 100%;
   animation: shimmer 1.4s linear infinite;
 }
@@ -255,73 +336,5 @@
     animation-delay: 0ms !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
-  }
-}
-
-/* ---- Student portal ---- */
-@layer components {
-  .panel {
-    background: var(--color-white-ish);
-    border: 1px solid var(--color-mist);
-    border-radius: 0.75rem;
-  }
-  .panel-pad {
-    padding: 1.25rem;
-  }
-  @media (min-width: 48rem) {
-    .panel-pad {
-      padding: 1.75rem;
-    }
-  }
-  .section-title {
-    font-family: var(--font-mono);
-    font-size: 0.8125rem;
-    letter-spacing: 0.04em;
-    color: var(--color-muted);
-  }
-  .choice {
-    display: block;
-    cursor: pointer;
-    border: 1.5px solid #8a9a95;
-    border-radius: 0.5rem;
-    background: var(--color-white-ish);
-    padding: 1rem 1.125rem;
-    transition:
-      border-color 0.15s,
-      background-color 0.15s,
-      box-shadow 0.15s;
-  }
-  .choice:hover {
-    border-color: var(--color-ink);
-  }
-  .choice[data-selected="true"] {
-    border-color: var(--color-crimson);
-    box-shadow: inset 0 0 0 1.5px var(--color-crimson);
-    background: #fff;
-  }
-  .choice[aria-disabled="true"] {
-    cursor: not-allowed;
-    opacity: 0.55;
-  }
-  /* Booking summary shaped like a ticket stub: notches at the tear line. */
-  .ticket {
-    position: relative;
-    background: var(--color-spruce);
-    color: var(--color-board);
-    border-radius: 0.75rem;
-    --notch: 0.7rem;
-    -webkit-mask:
-      radial-gradient(circle var(--notch) at 0 var(--tear, 62%), transparent 98%, #000) left / 51%
-        100% no-repeat,
-      radial-gradient(circle var(--notch) at 100% var(--tear, 62%), transparent 98%, #000) right /
-        51% 100% no-repeat;
-    mask:
-      radial-gradient(circle var(--notch) at 0 var(--tear, 62%), transparent 98%, #000) left / 51%
-        100% no-repeat,
-      radial-gradient(circle var(--notch) at 100% var(--tear, 62%), transparent 98%, #000) right /
-        51% 100% no-repeat;
-  }
-  .ticket-tear {
-    border-top: 2px dashed rgb(232 240 236 / 0.35);
   }
 }

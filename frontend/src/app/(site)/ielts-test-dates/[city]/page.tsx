@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { CtaBand } from "@/components/cta-band";
 import { FaqList } from "@/components/faq-list";
 import { PageHeader } from "@/components/page-header";
-import { ScheduleFilters } from "@/components/schedule-filters";
+import { DateSearch } from "@/components/date-search";
 import { ScheduleResults, SpeakingExplainer } from "@/components/schedule-results";
 import { cleanFilters } from "@/lib/filters";
 import { formatDate, formatNpr } from "@/lib/format";
@@ -89,13 +89,16 @@ export default async function CityPage({
         lede={city.intro || `Open IELTS dates, fees and seats in ${city.name}.`}
       />
       <div className="container-page">
-        <ScheduleFilters
-          basePath={base}
-          cities={cities}
-          types={types ?? []}
-          current={filters}
-          lockCity
-        />
+        <section className="panel panel-pad" aria-label="Search by preference">
+          <DateSearch
+            mode="live"
+            basePath={base}
+            cities={cities}
+            types={types ?? []}
+            current={filters}
+            lockCity
+          />
+        </section>
         <div className="mt-6" style={{ minHeight: 360 }}>
           <ScheduleResults
             data={data}

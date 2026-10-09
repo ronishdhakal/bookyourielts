@@ -26,15 +26,15 @@ export function PageTitle({
 const BOOKING: Record<BookingStatus, { label: string; cls: string }> = {
   initiated: {
     label: "Awaiting confirmation",
-    cls: "bg-marigold/25 text-[#6b4a00] ring-marigold/60",
+    cls: "bg-[#e9ecef] text-ink ring-[#cfd4da]",
   },
-  confirmed: { label: "Confirmed", cls: "bg-ok/10 text-ok ring-ok/30" },
-  cancelled: { label: "Cancelled", cls: "bg-mist text-muted ring-mist" },
+  confirmed: { label: "Confirmed", cls: "bg-ink text-white ring-ink" },
+  cancelled: { label: "Cancelled", cls: "bg-white text-muted ring-mist" },
 };
 const INQUIRY: Record<InquiryStatus, { label: string; cls: string }> = {
-  new: { label: "New", cls: "bg-crimson/10 text-crimson ring-crimson/30" },
-  contacted: { label: "Contacted", cls: "bg-marigold/25 text-[#6b4a00] ring-marigold/60" },
-  closed: { label: "Closed", cls: "bg-ok/10 text-ok ring-ok/30" },
+  new: { label: "New", cls: "bg-crimson-tint text-crimson-dark ring-crimson/30" },
+  contacted: { label: "Contacted", cls: "bg-[#e9ecef] text-ink ring-[#cfd4da]" },
+  closed: { label: "Closed", cls: "bg-ink text-white ring-ink" },
 };
 
 export function Pill({ kind, status }: { kind: "booking" | "inquiry"; status: string }) {

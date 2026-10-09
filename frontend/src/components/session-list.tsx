@@ -13,36 +13,13 @@ function inquireHref(s: TestSession) {
   return `/inquire?${p.toString()}`;
 }
 
-/** Calendar-leaf style badge: month on top, day number, weekday underneath. */
-function DateBadge({ date }: { date: string }) {
-  const month = formatDate(date, { day: undefined, year: undefined }).toUpperCase();
-  const day = formatDate(date, { month: undefined, year: undefined });
-  const weekday = formatDate(date, {
-    weekday: "short",
-    day: undefined,
-    month: undefined,
-    year: undefined,
-  });
-  return (
-    <div
-      className="border-mist w-[3.75rem] shrink-0 overflow-hidden rounded-md border bg-white text-center leading-none"
-      aria-hidden
-    >
-      <div className="bg-crimson py-1 text-[0.6875rem] font-semibold tracking-wide text-white">
-        {month}
-      </div>
-      <div className="pt-1.5 text-[1.5rem] font-bold tabular-nums">{day}</div>
-      <div className="text-muted pt-0.5 pb-1.5 text-[0.6875rem]">{weekday}</div>
-    </div>
-  );
-}
-
-function Action({ s }: { s: TestSession }) {
+function Action({ s, block = false }: { s: TestSession; block?: boolean }) {
+  const width = block ? "w-full" : "";
   if (s.is_bookable) {
     return (
       <Link
         href={appHref(`/book?session=${s.id}`)}
-        className="btn btn-primary btn-sm whitespace-nowrap max-md:w-full"
+        className={`btn btn-primary btn-sm whitespace-nowrap ${width}`}
         aria-label={`Book this date: ${s.test_type.name}, ${s.city.name}, ${formatDate(s.date)}`}
       >
         Book this date
@@ -50,15 +27,18 @@ function Action({ s }: { s: TestSession }) {
     );
   }
   return (
-    <Link href={inquireHref(s)} className="btn btn-outline btn-sm whitespace-nowrap max-md:w-full">
+    <Link href={inquireHref(s)} className={`btn btn-outline btn-sm whitespace-nowrap ${width}`}>
       Ask about similar dates
     </Link>
   );
 }
 
+const seatLabel = (s: TestSession) =>
+  s.seat_status === "few_left" ? `${s.seats_left} seats left` : undefined;
+
 /**
- * Open test dates as a clean list. `compact` hides the deadline line (used for short previews).
- * Each row is a self-contained region so it reads well on phones without a separate layout.
+ * Open test dates: a plain data table from tablet width up, stacked rows on phones.
+ * `compact` drops the deadline columns for short previews.
  */
 export function SessionList({
   sessions,
@@ -70,54 +50,110 @@ export function SessionList({
   caption: string;
 }) {
   return (
-    <ul className="panel divide-mist divide-y overflow-hidden" aria-label={caption}>
-      {sessions.map((s) => (
-        <li
-          key={s.id}
-          className="hover:bg-ink/[0.02] grid gap-x-5 gap-y-3 px-4 py-4 md:grid-cols-[auto_minmax(0,1fr)_auto_auto] md:items-center md:px-5"
-        >
-          <div className="flex min-w-0 items-start gap-4 md:contents">
-            <DateBadge date={s.date} />
-            <div className="min-w-0 md:col-start-2">
-              <p className="text-[1.0625rem] leading-snug font-semibold">{s.test_type.name}</p>
-              <p className="text-muted text-[0.9375rem]">
-                {s.city.name} · {s.provider_label} · {FORMAT_SHORT[s.format]}
-              </p>
-              {!compact && (
-                <p className="text-muted mt-1 text-[0.8125rem]">
-                  {s.slot === "morning" ? "Morning" : "Afternoon"} {SLOT_TIMES[s.slot]} · Register
-                  by {formatDate(s.registration_closes_on, { year: undefined })} · Results from{" "}
-                  {formatDate(s.results_date, { year: undefined })}
+    <div className="panel overflow-hidden">
+      <table className="hidden w-full text-left text-[0.9375rem] md:table">
+        <caption className="sr-only">{caption}</caption>
+        <thead className="border-mist text-muted border-b bg-[#f7f8fa] text-[0.8125rem]">
+          <tr>
+            <th scope="col" className="px-5 py-3 font-semibold">
+              Test date
+            </th>
+            <th scope="col" className="px-3 py-3 font-semibold">
+              Exam
+            </th>
+            <th scope="col" className="px-3 py-3 font-semibold">
+              City
+            </th>
+            <th scope="col" className="px-3 py-3 font-semibold">
+              Format
+            </th>
+            {!compact && (
+              <th scope="col" className="px-3 py-3 font-semibold">
+                Register by
+              </th>
+            )}
+            {!compact && (
+              <th scope="col" className="px-3 py-3 font-semibold">
+                Results from
+              </th>
+            )}
+            <th scope="col" className="px-3 py-3 font-semibold">
+              Fee
+            </th>
+            <th scope="col" className="px-3 py-3 font-semibold">
+              Seats
+            </th>
+            <th scope="col" className="px-5 py-3">
+              <span className="sr-only">Action</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody className="divide-mist divide-y">
+          {sessions.map((s) => (
+            <tr key={s.id} className="hover:bg-[#fafbfc]">
+              <td className="px-5 py-3.5 whitespace-nowrap">
+                <p className="font-semibold">{formatDate(s.date, { weekday: "short" })}</p>
+                <p className="text-muted text-[0.8125rem]">
+                  {s.slot === "morning" ? "Morning" : "Afternoon"} · {SLOT_TIMES[s.slot]}
                 </p>
+              </td>
+              <td className="px-3 py-3.5">
+                <p className="font-semibold">{s.test_type.name}</p>
+                <p className="text-muted text-[0.8125rem]">{s.provider_label}</p>
+              </td>
+              <td className="px-3 py-3.5">{s.city.name}</td>
+              <td className="px-3 py-3.5">{FORMAT_SHORT[s.format]}</td>
+              {!compact && (
+                <td className="px-3 py-3.5 whitespace-nowrap">
+                  {formatDate(s.registration_closes_on, { year: undefined })}
+                </td>
               )}
-            </div>
-          </div>
-          <div className="flex items-center justify-between gap-3 md:flex-col md:items-end md:justify-center md:gap-1.5">
-            <p className="font-semibold tabular-nums">{formatNpr(s.fee_npr)}</p>
-            <SeatChip
-              status={s.seat_status}
-              label={s.seat_status === "few_left" ? `${s.seats_left} seats left` : undefined}
-            />
-          </div>
-          <Action s={s} />
-        </li>
-      ))}
-    </ul>
-  );
-}
+              {!compact && (
+                <td className="px-3 py-3.5 whitespace-nowrap">
+                  {formatDate(s.results_date, { year: undefined })}
+                </td>
+              )}
+              <td className="px-3 py-3.5 font-semibold whitespace-nowrap">
+                {formatNpr(s.fee_npr)}
+              </td>
+              <td className="px-3 py-3.5">
+                <SeatChip status={s.seat_status} label={seatLabel(s)} />
+              </td>
+              <td className="px-5 py-3.5 text-right">
+                <Action s={s} />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
 
-export function ListSkeleton({ rows = 5 }: { rows?: number }) {
-  return (
-    <div className="panel divide-mist divide-y" aria-hidden>
-      {Array.from({ length: rows }).map((_, i) => (
-        <div key={i} className="flex items-center gap-4 px-5 py-4">
-          <div className="skeleton-light h-16 w-[3.75rem] rounded-md" />
-          <div className="flex-1 space-y-2">
-            <div className="skeleton-light h-4 w-1/2 rounded" />
-            <div className="skeleton-light h-3 w-1/3 rounded" />
-          </div>
-        </div>
-      ))}
+      <ul className="divide-mist divide-y md:hidden" aria-label={caption}>
+        {sessions.map((s) => (
+          <li key={s.id} className="px-4 py-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="font-semibold">{formatDate(s.date, { weekday: "short" })}</p>
+                <p className="mt-0.5 leading-snug">{s.test_type.name}</p>
+                <p className="text-muted text-[0.875rem]">
+                  {s.city.name} · {s.provider_label} · {FORMAT_SHORT[s.format]}
+                </p>
+              </div>
+              <SeatChip status={s.seat_status} label={seatLabel(s)} />
+            </div>
+            {!compact && (
+              <p className="text-muted mt-2 text-[0.8125rem]">
+                {s.slot === "morning" ? "Morning" : "Afternoon"} · Register by{" "}
+                {formatDate(s.registration_closes_on, { year: undefined })} · Results from{" "}
+                {formatDate(s.results_date, { year: undefined })}
+              </p>
+            )}
+            <div className="mt-3 flex items-center justify-between gap-4">
+              <p className="font-semibold">{formatNpr(s.fee_npr)}</p>
+              <Action s={s} />
+            </div>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

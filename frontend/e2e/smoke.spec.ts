@@ -48,7 +48,7 @@ test("home page leads with the booking, not with WhatsApp", async ({ page }) => 
   await expect(page.getByRole("heading", { level: 1 })).toContainText("IELTS test date in Nepal");
   await expect(page.getByRole("heading", { level: 1 })).not.toContainText(/whatsapp/i);
   await expect(page.getByRole("heading", { name: "Upcoming test dates" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Find your test date" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Search test dates" })).toBeVisible();
   await expect(page.getByText("independent service").first()).toBeVisible();
   await expect(page.getByRole("link", { name: /^Book this date/ }).first()).toBeVisible();
   await expect(page.locator("section").first()).not.toContainText(/whatsapp/i);
@@ -75,12 +75,12 @@ test("filter dates, log in, and book with WhatsApp only at the last step", async
 
   // The chosen date skips straight to the candidate details.
   await expect(page).toHaveURL(/\/portal\/book\?session=\d+/);
-  await expect(page.getByRole("heading", { name: "Candidate details" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Candidate detail" })).toBeVisible();
   await expect(page.locator("main")).not.toContainText(/whatsapp/i);
   await expect(page.getByLabel("Full name *")).toHaveValue(u.name);
 
   await fillDetails(page, { province: "Gandaki", district: "Kaski", city: "Lakeside" });
-  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByRole("button", { name: "Proceed" }).click();
 
   // Only now does the flow mention WhatsApp.
   await expect(page.getByRole("heading", { name: "Review and confirm" })).toBeVisible();
@@ -101,36 +101,39 @@ test("filter dates, log in, and book with WhatsApp only at the last step", async
   await expect(page.getByText("Lakeside, Kaski, Gandaki")).toBeVisible();
 });
 
-test("the stepper walks through provider, preferences, date, details and review", async ({
+test("the booking form walks through exam preference, candidate detail and review", async ({
   page,
 }) => {
   await page.goto("/register?next=%2Fportal%2Fbook");
   await fillRegistration(page, uniqueUser());
 
-  await expect(page.getByRole("heading", { name: "Choose your exam provider" })).toBeVisible();
+  // No provider yet: the provider dialog opens first.
+  await expect(page.getByRole("heading", { name: "Choose provider" })).toBeVisible();
   await expect(page.locator("main")).not.toContainText(/whatsapp/i);
-  await expect(page.getByRole("button", { name: "Continue" })).toBeDisabled();
-  await page.getByText("British Council IELTS").click();
-  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByRole("button", { name: /British Council IELTS/ }).click();
 
-  await expect(page.getByRole("heading", { name: "Exam preferences" })).toBeVisible();
-  await page.getByLabel("Test type").selectOption("academic");
-  await page.getByLabel("Format").selectOption("computer");
-  await page.getByRole("radio", { name: /Kathmandu/ }).check({ force: true });
-  await page.getByRole("button", { name: "Continue" }).click();
+  await expect(page.getByRole("heading", { name: "Exam preference", level: 2 })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Proceed" })).toBeDisabled();
+  await page.getByLabel("Type", { exact: true }).selectOption("academic");
+  await page.getByLabel("Format", { exact: true }).selectOption("computer");
+  await page.getByLabel("City", { exact: true }).selectOption("kathmandu");
+  await page.getByRole("button", { name: "Proceed" }).click();
 
-  await expect(page.getByRole("heading", { name: "Pick your test date" })).toBeVisible();
-  await page.locator('[role="grid"] button:not([disabled])').first().click();
-  await page.getByRole("radio").first().check({ force: true });
-  await page.getByRole("button", { name: "Continue" }).click();
-
-  await expect(page.getByRole("heading", { name: "Candidate details" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Candidate detail" })).toBeVisible();
   // Required fields are validated with specific messages.
   await page.getByLabel(/Date of birth/).fill("");
-  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByRole("button", { name: "Proceed" }).click();
+  await expect(page.getByText("Pick a test date.")).toBeVisible();
   await expect(page.getByText("Enter the date of birth.")).toBeVisible();
   await expect(page.getByText("Choose a province.")).toBeVisible();
   await expect(page.getByText("Please confirm that the details match the passport.")).toBeVisible();
+
+  // The calendar highlights the days with seats.
+  await page.getByRole("button", { name: "Pick a date" }).click();
+  await page.locator('[role="dialog"] [role="gridcell"] button:not([disabled])').first().click();
+  const session = page.getByLabel("Session", { exact: true });
+  if (await session.isVisible()) await session.selectOption({ index: 1 });
+  await expect(page.getByText("Register by")).toBeVisible();
 
   await fillDetails(page, { province: "Bagmati", district: "Kathmandu", city: "Thamel" });
   await page
@@ -142,12 +145,12 @@ test("the stepper walks through provider, preferences, date, details and review"
       buffer: Buffer.from("89504e470d0a1a0a00", "hex"),
     });
   await expect(page.getByText("front.png")).toBeVisible();
-  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByRole("button", { name: "Proceed" }).click();
 
   await expect(page.getByRole("heading", { name: "Review and confirm" })).toBeVisible();
   await expect(page.getByText("Front attached")).toBeVisible();
   await page.getByRole("button", { name: "Edit" }).first().click();
-  await expect(page.getByRole("heading", { name: "Exam preferences" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Exam preference", level: 2 })).toBeVisible();
 });
 
 test("no matching dates shows an empty state that leads to an inquiry", async ({ page }) => {
@@ -210,7 +213,7 @@ test("a student can withdraw an unconfirmed request", async ({ page }) => {
   await page.getByRole("link", { name: "Create a free account" }).click();
   await fillRegistration(page, uniqueUser());
   await fillDetails(page, { province: "Bagmati", district: "Kathmandu", city: "Thamel" });
-  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByRole("button", { name: "Proceed" }).click();
   await page.getByLabel(/I agree to the/).check();
   const popup = page.context().waitForEvent("page");
   await page.getByRole("button", { name: "Confirm and continue on WhatsApp" }).click();
@@ -227,7 +230,7 @@ test("a signed-in student skips the marketing home and lands on their dashboard"
   await page.goto("/register?next=%2Fportal");
   await fillRegistration(page, uniqueUser());
   await expect(page).toHaveURL(/\/portal$/);
-  await expect(page.getByRole("heading", { name: /^Namaste, / })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /^Welcome, / })).toBeVisible();
 
   await page.goto("/");
   await expect(page).toHaveURL(/\/portal$/);
@@ -280,7 +283,7 @@ test("staff confirm a request from the dashboard", async ({ page, browser }) => 
   await sp.getByRole("link", { name: "Create a free account" }).click();
   await fillRegistration(sp, uniqueUser());
   await fillDetails(sp, { province: "Bagmati", district: "Chitwan", city: "Bharatpur" });
-  await sp.getByRole("button", { name: "Continue" }).click();
+  await sp.getByRole("button", { name: "Proceed" }).click();
   await sp.getByLabel(/I agree to the/).check();
   await sctx.route("https://wa.me/**", (r) => r.fulfill({ body: "ok" }));
   const popup = sp.context().waitForEvent("page");

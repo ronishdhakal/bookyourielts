@@ -52,23 +52,17 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
     );
   }
 
-  const initials = user.full_name
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() ?? "")
-    .join("");
-
   return (
-    <div className="bg-paper min-h-screen pb-24 md:pb-0">
-      <div className="bg-spruce text-board text-[0.8125rem]">
+    <div className="min-h-screen pb-20 md:pb-0">
+      <div className="on-dark bg-ink text-[0.8125rem] text-white">
         <div className="container-page flex h-9 items-center justify-between gap-4">
-          <a href={siteHref("/?site=1")} className="hover:underline">
+          <a href={siteHref("/?site=1")} className="text-white/80 hover:underline">
             ← bookyourielts.com
           </a>
           {site?.contact_phone && (
             <a
               href={`tel:${site.contact_phone.replace(/\s/g, "")}`}
-              className="font-mono hover:underline"
+              className="font-medium hover:underline"
             >
               Need help? {site.contact_phone}
             </a>
@@ -76,10 +70,10 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
         </div>
       </div>
 
-      <header className="border-mist bg-white-ish sticky top-0 z-30 border-b">
-        <div className="container-page flex h-16 items-center gap-6">
-          <Link href={portalHref("/")} aria-label="Student home">
-            <Logo height={34} />
+      <header className="border-mist sticky top-0 z-30 border-b bg-white">
+        <div className="container-page flex h-16 items-center gap-8">
+          <Link href={portalHref("/")} aria-label="Student home" className="shrink-0">
+            <Logo height={36} />
           </Link>
           <nav aria-label="Portal" className="hidden h-full items-stretch gap-1 md:flex">
             {TABS.map((t) => (
@@ -87,7 +81,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
                 key={t.href}
                 href={portalHref(t.href)}
                 aria-current={t.match(pathname) ? "page" : undefined}
-                className="aria-[current=page]:after:bg-crimson relative flex items-center px-4 text-[0.9375rem] font-medium hover:bg-black/5 aria-[current=page]:font-bold aria-[current=page]:after:absolute aria-[current=page]:after:inset-x-3 aria-[current=page]:after:bottom-0 aria-[current=page]:after:h-0.5"
+                className="hover:text-crimson aria-[current=page]:border-crimson aria-[current=page]:text-crimson flex items-center border-b-2 border-transparent px-4 text-[0.9375rem] font-medium aria-[current=page]:font-semibold"
               >
                 {t.label}
               </Link>
@@ -99,12 +93,22 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
               aria-expanded={menu}
               aria-haspopup="menu"
               onClick={() => setMenu((m) => !m)}
-              className="border-mist hover:border-ink flex min-h-11 items-center gap-2.5 rounded-full border py-1 pr-3 pl-1 transition-colors"
+              className="border-mist hover:border-ink flex min-h-11 items-center gap-2.5 rounded-lg border py-1 pr-3 pl-1.5"
             >
-              <span className="bg-spruce text-board flex h-9 w-9 items-center justify-center rounded-full font-mono text-sm font-semibold">
-                {initials || "?"}
+              <span
+                className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-[#c9ced5]"
+                aria-hidden
+              >
+                <svg
+                  viewBox="0 0 100 100"
+                  className="h-7 w-7 translate-y-1 text-white"
+                  fill="currentColor"
+                >
+                  <circle cx="50" cy="36" r="18" />
+                  <path d="M14 100c0-22 16-36 36-36s36 14 36 36z" />
+                </svg>
               </span>
-              <span className="hidden max-w-[10rem] truncate text-[0.9375rem] font-medium sm:inline">
+              <span className="hidden max-w-[10rem] truncate text-[0.875rem] font-semibold sm:inline">
                 {user.full_name}
               </span>
               <svg width="14" height="14" viewBox="0 0 20 20" aria-hidden fill="currentColor">
@@ -153,7 +157,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
                   className="text-crimson block w-full px-4 py-2.5 text-left font-semibold hover:bg-black/5"
                   onClick={async () => {
                     await logout();
-                    window.location.assign(siteHref("/"));
+                    window.location.assign(siteHref("/?site=1"));
                   }}
                 >
                   Log out
@@ -171,22 +175,14 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
       {/* Phone tab bar */}
       <nav
         aria-label="Portal"
-        className="border-mist bg-white-ish fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t md:hidden"
+        className="border-mist fixed inset-x-0 bottom-0 z-30 grid grid-cols-3 border-t bg-white md:hidden"
       >
-        {[
-          ...TABS.slice(0, 2),
-          {
-            href: "/book",
-            label: "Book",
-            match: (p: string) => p.startsWith("/book") && !p.startsWith("/bookings"),
-          },
-          TABS[2]!,
-        ].map((t) => (
+        {TABS.map((t) => (
           <Link
             key={t.href}
             href={portalHref(t.href)}
             aria-current={t.match(pathname) ? "page" : undefined}
-            className="aria-[current=page]:text-crimson aria-[current=page]:border-crimson flex min-h-14 items-center justify-center text-[0.8125rem] font-semibold aria-[current=page]:border-t-2"
+            className="aria-[current=page]:text-crimson aria-[current=page]:border-crimson flex min-h-14 items-center justify-center border-t-2 border-transparent text-[0.8125rem] font-semibold"
           >
             {t.label}
           </Link>

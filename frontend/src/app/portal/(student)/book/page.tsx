@@ -5,13 +5,8 @@ export const metadata = { title: "Book an exam" };
 export default async function BookPage({
   searchParams,
 }: {
-  searchParams: Promise<{ session?: string }>;
+  searchParams: Promise<{ session?: string; provider?: string }>;
 }) {
-  const { session } = await searchParams;
-  return (
-    <>
-      <h1 className="mb-6 text-3xl font-bold md:text-4xl">Book an exam</h1>
-      <BookingWizardLoader sessionId={session} />
-    </>
-  );
+  const { session, provider } = await searchParams;
+  return <BookingWizardLoader sessionId={session} provider={provider} />;
 }

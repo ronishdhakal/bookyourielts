@@ -185,7 +185,7 @@ export function DatesAdmin() {
                       aria-checked={s.is_visible}
                       aria-label={`${s.is_visible ? "Hide" : "Show"} ${formatDate(s.date)} ${s.city_name}`}
                       onClick={() => void toggle(s)}
-                      className={`relative h-6 w-11 rounded-full transition-colors ${s.is_visible ? "bg-spruce" : "bg-[#9aa8a3]"}`}
+                      className={`relative h-6 w-11 rounded-full transition-colors ${s.is_visible ? "bg-spruce" : "bg-[#aab1bb]"}`}
                     >
                       <span
                         className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all ${s.is_visible ? "left-[22px]" : "left-0.5"}`}

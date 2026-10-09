@@ -7,11 +7,11 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
   return (
     <>
       {site.announcement && (
-        <div className="bg-marigold text-ink px-4 py-2 text-center text-[0.9375rem] font-medium">
+        <div className="bg-crimson px-4 py-2 text-center text-[0.875rem] font-medium text-white">
           {site.announcement}
         </div>
       )}
-      <Header />
+      <Header phone={site.contact_phone} />
       <main id="main">{children}</main>
       <Footer />
     </>

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { PageHeader } from "@/components/page-header";
-import { ScheduleFilters } from "@/components/schedule-filters";
+import { DateSearch } from "@/components/date-search";
 import { ScheduleResults, SpeakingExplainer } from "@/components/schedule-results";
 import { CtaBand } from "@/components/cta-band";
 import { cleanFilters } from "@/lib/filters";
@@ -43,12 +43,15 @@ export default async function TestDatesPage({ searchParams }: { searchParams: SP
         lede="Every open date, with fee, seats left and registration deadline. Pick one and book it in a few steps."
       />
       <div className="container-page">
-        <ScheduleFilters
-          basePath="/ielts-test-dates"
-          cities={cities ?? []}
-          types={types ?? []}
-          current={filters}
-        />
+        <section className="panel panel-pad" aria-label="Search by preference">
+          <DateSearch
+            mode="live"
+            basePath="/ielts-test-dates"
+            cities={cities ?? []}
+            types={types ?? []}
+            current={filters}
+          />
+        </section>
         <div className="mt-6" style={{ minHeight: 480 }}>
           <ScheduleResults
             data={data}

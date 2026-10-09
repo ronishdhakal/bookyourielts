@@ -1,25 +1,14 @@
 import type { Metadata, Viewport } from "next";
-import { Bricolage_Grotesque, IBM_Plex_Mono, Instrument_Sans } from "next/font/google";
+import { Public_Sans } from "next/font/google";
 import { AuthProvider } from "@/components/auth-provider";
 import { JsonLd } from "@/components/json-ld";
 import { getSite } from "@/lib/site";
 import { SITE_NAME, SITE_URL, organizationLd } from "@/lib/seo";
 import "./globals.css";
 
-const display = Bricolage_Grotesque({
+const sans = Public_Sans({
   subsets: ["latin"],
-  variable: "--font-bricolage",
-  display: "swap",
-});
-const sans = Instrument_Sans({
-  subsets: ["latin"],
-  variable: "--font-instrument",
-  display: "swap",
-});
-const mono = IBM_Plex_Mono({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  variable: "--font-plex-mono",
+  variable: "--font-public-sans",
   display: "swap",
 });
 
@@ -39,13 +28,13 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#f2f4f0",
+  themeColor: "#f1f3f5",
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const site = await getSite();
   return (
-    <html lang="en" className={`${display.variable} ${sans.variable} ${mono.variable}`}>
+    <html lang="en" className={sans.variable}>
       <body>
         <a
           href="#main"

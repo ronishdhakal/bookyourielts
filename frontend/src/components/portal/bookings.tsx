@@ -99,7 +99,7 @@ export function BookingsList() {
         <ul className="space-y-4">
           {shown.map((b) => (
             <li key={b.id}>
-              <article className="panel overflow-hidden">
+              <article className="border-mist overflow-hidden rounded-lg border bg-white">
                 <div className="flex flex-wrap items-center gap-4 p-5">
                   <ProviderMark label={b.session.provider_label} />
                   <div className="min-w-0 flex-1">
@@ -119,7 +119,7 @@ export function BookingsList() {
                   <Fact k="Fee" v={formatNpr(b.session.fee_npr)} mono />
                   <Fact k="Reference" v={b.reference} mono />
                 </dl>
-                <div className="bg-paper/60 border-mist flex flex-wrap items-center justify-between gap-3 border-t px-5 py-3">
+                <div className="border-mist flex flex-wrap items-center justify-between gap-3 border-t bg-[#f7f8fa] px-5 py-3">
                   <p className="text-muted text-[0.875rem]">{STATUS_UI[b.status].help}</p>
                   <Link href={portalHref(`/bookings/${b.id}`)} className="btn btn-outline btn-sm">
                     View details

@@ -1,6 +1,15 @@
 import type { SessionFilters } from "./types";
 
-const KEYS = ["city", "test_type", "test_format", "month", "hide_closed", "page"] as const;
+const KEYS = [
+  "city",
+  "provider",
+  "category",
+  "test_type",
+  "test_format",
+  "month",
+  "hide_closed",
+  "page",
+] as const;
 
 /** Pick only known filter params from a Next searchParams object. */
 export function cleanFilters(raw: Record<string, string | string[] | undefined>): SessionFilters {
