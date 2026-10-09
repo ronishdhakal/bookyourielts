@@ -91,3 +91,10 @@ def test_password_reset_flow(api, user):
 def test_post_without_trailing_slash_is_not_redirected(api):
     res = api.post("/api/v1/auth/register", REG, format="json")
     assert res.status_code == 201
+
+
+def test_dev_trusts_localhost_on_other_ports(settings):
+    from django.conf import settings as s
+
+    assert "http://localhost:3001" in s.CSRF_TRUSTED_ORIGINS
+    assert "http://127.0.0.1:3005" in s.CSRF_TRUSTED_ORIGINS

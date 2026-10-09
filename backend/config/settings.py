@@ -122,9 +122,11 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # --- Frontend / CORS / CSRF -------------------------------------------------
 FRONTEND_URL = env("FRONTEND_URL", "http://localhost:3000")
-CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS", FRONTEND_URL)
+# In development the site may run on any nearby port (3000, 3001, ...), so trust localhost on 3000-3010.
+_DEV_ORIGINS = ",".join(f"http://{h}:{p}" for p in range(3000, 3011) for h in ("localhost", "127.0.0.1"))
+CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS", _DEV_ORIGINS if DEBUG else FRONTEND_URL)
 CORS_ALLOW_CREDENTIALS = True
-CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS", FRONTEND_URL)
+CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS", _DEV_ORIGINS if DEBUG else FRONTEND_URL)
 
 # One login for the site and users.<domain>: set COOKIE_DOMAIN=.bookyourielts.com in production.
 COOKIE_DOMAIN = env("COOKIE_DOMAIN") or None
