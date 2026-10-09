@@ -38,9 +38,19 @@ What you need before you start
 
 Step 1. Get the code on the server
 ----------------------------------
-    mkdir -p /srv && cd /srv
-    git clone <your repository url> bookyourielts
+    mkdir -p /var/www && cd /var/www
+    git clone git@github.com:ronishdhakal/bookyourielts.git bookyourielts
     cd bookyourielts
+
+  The server needs read access to the private repo. Create a deploy key once:
+      ssh-keygen -t ed25519 -f ~/.ssh/byi_deploy -N ""
+      cat ~/.ssh/byi_deploy.pub      add it in GitHub > repo > Settings > Deploy keys (read-only)
+      printf 'Host github-byi
+  HostName github.com
+  User git
+  IdentityFile ~/.ssh/byi_deploy
+' >> ~/.ssh/config
+  then clone with  git@github-byi:ronishdhakal/bookyourielts.git  instead of the URL above.
 
 Step 2. Create the .env file (never commit it)
 ----------------------------------------------
@@ -83,7 +93,7 @@ Step 2. Create the .env file (never commit it)
 
 Step 3. Start the database (once)
 ---------------------------------
-    cd /srv/bookyourielts
+    cd /var/www/bookyourielts
     docker compose -f deploy/docker-compose.db.yml --env-file .env up -d
     docker ps --filter name=byi-shared
 
@@ -154,7 +164,7 @@ Step 7. Create the first admin and check the site
 
 Everyday: deploying an update
 -----------------------------
-    cd /srv/bookyourielts
+    cd /var/www/bookyourielts
     git pull
     ./deploy/deploy.sh
 
