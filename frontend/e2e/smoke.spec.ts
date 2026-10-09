@@ -93,6 +93,10 @@ test("home page leads with the booking, not with WhatsApp", async ({ page }) => 
   await expect(page.getByRole("heading", { level: 1 })).not.toContainText(/whatsapp/i);
   await expect(page.getByRole("heading", { name: "Upcoming test dates" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Search test dates" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Book Your IELTS" })).toHaveAttribute(
+    "href",
+    /\/portal\/dates$/,
+  );
   await expect(page.getByText("independent service").first()).toBeVisible();
   await expect(page.getByRole("link", { name: /^Book this date/ }).first()).toBeVisible();
   await expect(page.locator("section").first()).not.toContainText(/whatsapp/i);
@@ -406,4 +410,14 @@ test("staff confirm a request and resolve a change request from the dashboard", 
   await page.getByRole("button", { name: /^Confirm booking/ }).click();
   await expect(page.getByText("Confirmed").first()).toBeVisible();
   await expect(page.getByRole("button", { name: /^Confirm booking/ })).toHaveCount(0);
+});
+
+test("the Book Your IELTS button leads to the portal after sign-in", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("link", { name: "Book Your IELTS" }).click();
+  await expect(page).toHaveURL(/\/login\?next=/);
+  await page.getByRole("link", { name: "Create a free account" }).click();
+  await fillRegistration(page, uniqueUser());
+  await expect(page).toHaveURL(/\/portal\/dates$/);
+  await expect(page.getByRole("heading", { name: "Find a date", level: 1 })).toBeVisible();
 });

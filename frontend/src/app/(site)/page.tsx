@@ -4,6 +4,7 @@ import { CtaBand } from "@/components/cta-band";
 import { DateSearch } from "@/components/date-search";
 import { FaqList } from "@/components/faq-list";
 import { SessionList } from "@/components/session-list";
+import { appHref } from "@/lib/portal";
 import { pageMetadata } from "@/lib/seo";
 import { fetchCities, fetchFaqs, fetchSessions, fetchTestTypes } from "@/lib/server-api";
 
@@ -87,6 +88,12 @@ export default async function HomePage() {
               Search open dates by provider, test type, format and city. Seats and fees are shown
               before you book.
             </p>
+            <a
+              href={appHref("/dates")}
+              className="btn btn-primary mt-6 !min-h-[3.25rem] px-8 text-base"
+            >
+              Book Your IELTS
+            </a>
           </div>
           <dl className="grid grid-cols-3 gap-6 border-t border-white/20 pt-5 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-10">
             {[
