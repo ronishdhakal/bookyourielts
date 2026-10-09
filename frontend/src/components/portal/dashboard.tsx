@@ -17,7 +17,7 @@ function greeting() {
 
 export function Dashboard() {
   const { user } = useAuth();
-  const { bookings, alerts, error, reload } = usePortalData();
+  const { bookings, alerts, error, reload, notifications, markRead } = usePortalData();
   const router = useRouter();
 
   // Staff land on the admin dashboard, like students land here. ?student=1 shows this page anyway.
@@ -34,6 +34,9 @@ export function Dashboard() {
   const upcoming = (bookings ?? [])
     .filter((b) => b.status !== "cancelled" && daysUntil(b.session.date) >= 0)
     .sort((a, b) => a.session.date.localeCompare(b.session.date))[0];
+
+  // The newest unread update about a booking (confirmed, session assigned, cancelled).
+  const news = notifications.find((n) => !n.is_read && n.kind !== "received");
 
   const tasks: Task[] = [
     ...(bookings ?? []).flatMap((b) => bookingTasks(b, (id) => portalHref(`/bookings/${id}`))),
@@ -73,6 +76,42 @@ export function Dashboard() {
           Find a date
         </Link>
       </div>
+
+      {news && (
+        <section
+          aria-label="Latest update"
+          className={`mb-6 flex flex-wrap items-center gap-x-6 gap-y-3 rounded-lg px-5 py-4 ${
+            news.kind === "confirmed" ? "bg-ink text-white" : "panel"
+          }`}
+        >
+          <div className="min-w-0 flex-1">
+            <p className="font-bold">{news.title}</p>
+            <p
+              className={`mt-0.5 text-[0.9375rem] ${news.kind === "confirmed" ? "text-white/80" : "text-muted"}`}
+            >
+              {news.body}
+            </p>
+          </div>
+          <div className="flex items-center gap-4">
+            {news.booking_id && (
+              <Link
+                href={portalHref(`/bookings/${news.booking_id}`)}
+                onClick={() => void markRead({ ids: [news.id] })}
+                className={`btn ${news.kind === "confirmed" ? "btn-primary" : "btn-dark"}`}
+              >
+                View booking
+              </Link>
+            )}
+            <button
+              type="button"
+              className="underline"
+              onClick={() => void markRead({ ids: [news.id] })}
+            >
+              Dismiss
+            </button>
+          </div>
+        </section>
+      )}
 
       {error && (
         <div role="alert" className="border-crimson mb-6 rounded-lg border-2 px-4 py-3 font-medium">

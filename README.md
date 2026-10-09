@@ -203,3 +203,6 @@ survive deploys; back this volume up together with the database. Cloudflare R2 (
 Online payments (eSewa, Khalti, bank), automatic confirmation emails, SMS or WhatsApp notifications and a test-prep area.
 Seat logic lives in `apps/bookings/services.py`, so a payment callback can call `set_booking_status` unchanged; the status enum and
 `BookingRequest` model are the natural place to add payment fields.
+
+## Notifications and email
+Booking events (request received, confirmed, cancelled by staff, session and venue assigned, change request handled) create a **portal notification** (bell, Notifications page, dashboard banner) and send an **email** when `EMAIL_HOST` is set. Students can switch emails off in Profile; portal notifications always appear. Mail failures are logged and never block a booking. Set the `EMAIL_*` values in `backend/.env` (see `.env.example`) and check them with `python manage.py send_test_email you@example.com`. Without `EMAIL_HOST`, emails are printed to the server log.

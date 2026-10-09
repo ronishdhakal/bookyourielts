@@ -505,3 +505,38 @@ test("staff assign the session and venue after booking and the student sees them
   await expect(sp.getByText("Test Centre, Bharatpur")).toBeVisible();
   await sctx.close();
 });
+
+test("a confirmed booking shows up in the student's portal notifications", async ({
+  page,
+  browser,
+}) => {
+  const sctx = await browser.newContext();
+  await sctx.route("https://wa.me/**", (r) => r.fulfill({ body: "ok" }));
+  const sp = await sctx.newPage();
+  await register(sp, "/portal/dates?city=chitwan");
+  await sp
+    .getByRole("button", { name: /^Select/ })
+    .first()
+    .click();
+  await fillDetails(sp, { province: "Bagmati", district: "Chitwan", city: "Bharatpur" });
+  const reference = await confirmBooking(sp);
+
+  await adminLogin(page);
+  await page.goto(`/portal/manage/bookings?q=${reference}`);
+  await page.getByRole("link", { name: reference }).first().click();
+  await page.getByRole("button", { name: /^Confirm booking/ }).click();
+  await expect(page.getByText("Confirmed").first()).toBeVisible();
+
+  await sp.goto("/portal");
+  await expect(sp.getByRole("region", { name: "Latest update" })).toContainText(
+    `${reference} is confirmed`,
+  );
+  await sp.getByRole("button", { name: /^Notifications/ }).click();
+  await expect(sp.getByRole("menuitem", { name: /is confirmed/ })).toBeVisible();
+  await sp.getByRole("link", { name: "See all notifications" }).click();
+  await expect(sp.getByRole("heading", { name: "Notifications", level: 1 })).toBeVisible();
+  await expect(sp.getByText(`Your booking ${reference} is confirmed`)).toBeVisible();
+  await sp.getByRole("button", { name: "Mark all as read" }).click();
+  await expect(sp.getByRole("button", { name: "Mark all as read" })).toHaveCount(0);
+  await sctx.close();
+});

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { authApi, catalogApi } from "@/lib/api";
 import { APP_URL, portalHref, siteHref } from "@/lib/portal";
+import { timeAgo } from "@/lib/format";
 import type { SiteInfo } from "@/lib/types";
 import { useAuth } from "../auth-provider";
 import { Logo } from "../logo";
@@ -120,7 +121,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
 
 function Frame({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
-  const { bookings, alerts } = usePortalData();
+  const { bookings, alerts, notifications: notes, unread, markRead } = usePortalData();
   const pathname = logicalPath(usePathname());
   const [site, setSite] = useState<SiteInfo | null>(null);
   const [menu, setMenu] = useState<string | null>(null);
@@ -136,7 +137,7 @@ function Frame({ children }: { children: React.ReactNode }) {
   );
   const fresh = (alerts ?? []).filter((a) => a.is_active && a.new_matches > 0);
   const counts = { tasks: tasks.length, alerts: fresh.length };
-  const notifications = tasks.length + fresh.length;
+  const notifications = unread + tasks.length + fresh.length;
   const menuOpen = menu === pathname;
 
   const nav = (
@@ -236,13 +237,55 @@ function Frame({ children }: { children: React.ReactNode }) {
                   className="panel absolute right-0 mt-2 w-[min(22rem,calc(100vw-2rem))] shadow-xl"
                   onClick={() => setBell(false)}
                 >
-                  <p className="border-mist border-b px-4 py-3 font-semibold">Notifications</p>
-                  {notifications === 0 ? (
+                  <div className="border-mist flex items-center justify-between border-b px-4 py-3">
+                    <p className="font-semibold">Notifications</p>
+                    {unread > 0 && (
+                      <button
+                        type="button"
+                        className="text-[0.8125rem] underline"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void markRead({ all: true });
+                        }}
+                      >
+                        Mark all as read
+                      </button>
+                    )}
+                  </div>
+                  {notifications === 0 && notes.length === 0 ? (
                     <p className="text-muted px-4 py-6 text-center text-[0.9375rem]">
                       You are all caught up.
                     </p>
                   ) : (
                     <ul className="divide-mist max-h-96 divide-y overflow-y-auto">
+                      {notes.slice(0, 6).map((n) => (
+                        <li key={`n${n.id}`}>
+                          <Link
+                            role="menuitem"
+                            href={portalHref(
+                              n.booking_id ? `/bookings/${n.booking_id}` : "/notifications",
+                            )}
+                            onClick={() => !n.is_read && void markRead({ ids: [n.id] })}
+                            className="flex gap-3 px-4 py-3 hover:bg-[#f7f8fa]"
+                          >
+                            <span
+                              aria-hidden
+                              className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${n.is_read ? "bg-transparent" : "bg-crimson"}`}
+                            />
+                            <span>
+                              <span
+                                className={`block text-[0.9375rem] ${n.is_read ? "" : "font-semibold"}`}
+                              >
+                                {n.title}
+                                {!n.is_read && <span className="sr-only"> (new)</span>}
+                              </span>
+                              <span className="text-muted text-[0.8125rem]">
+                                {timeAgo(n.created_at)}
+                              </span>
+                            </span>
+                          </Link>
+                        </li>
+                      ))}
                       {fresh.map((a) => (
                         <li key={`a${a.id}`}>
                           <Link
@@ -274,6 +317,12 @@ function Frame({ children }: { children: React.ReactNode }) {
                       ))}
                     </ul>
                   )}
+                  <Link
+                    href={portalHref("/notifications")}
+                    className="border-mist block border-t px-4 py-3 text-center text-[0.9375rem] font-semibold hover:bg-[#f7f8fa]"
+                  >
+                    See all notifications
+                  </Link>
                 </div>
               )}
             </div>

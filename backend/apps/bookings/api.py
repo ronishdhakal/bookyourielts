@@ -269,7 +269,7 @@ class BookingCancelView(APIView):
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        services.set_booking_status(booking.pk, BookingStatus.CANCELLED)
+        services.set_booking_status(booking.pk, BookingStatus.CANCELLED, notify=False)
         return Response(BookingSerializer(_my_booking(request, pk)).data)
 
 

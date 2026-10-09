@@ -29,6 +29,7 @@ class UserSerializer(serializers.ModelSerializer):
             "phone",
             "date_of_birth",
             "email_verified",
+            "email_notifications",
             "is_staff",
             "date_joined",
         ]

@@ -16,7 +16,7 @@ from apps.core.nepal import PROVINCES
 
 from .alerts import alert_stats
 from .api import BookingSerializer, _django_validator
-from .models import BookingRequest, BookingStatus, Candidate, DateAlert
+from .models import BookingRequest, BookingStatus, Candidate, DateAlert, Notification
 from .validators import check_date_of_birth, check_region, validate_passport_file
 
 MAX_CANDIDATES = 20
@@ -286,3 +286,52 @@ class BookingChangeRequestView(APIView):
         booking.change_requested_at = timezone.now()
         booking.save(update_fields=["change_request", "change_requested_at", "updated_at"])
         return Response(BookingSerializer(booking).data)
+
+
+# ------------------------------------------------------------------ notifications
+class NotificationSerializer(serializers.ModelSerializer):
+    is_read = serializers.SerializerMethodField()
+    booking_id = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = Notification
+        fields = ["id", "kind", "title", "body", "booking_id", "is_read", "created_at"]
+
+    def get_is_read(self, obj) -> bool:
+        return obj.read_at is not None
+
+
+class NotificationListView(APIView):
+    """The student's latest notifications plus how many are unread."""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(responses=NotificationSerializer(many=True))
+    def get(self, request):
+        qs = Notification.objects.filter(user=request.user)
+        return Response(
+            {
+                "unread": qs.filter(read_at__isnull=True).count(),
+                "results": NotificationSerializer(qs[:50], many=True).data,
+            }
+        )
+
+
+class NotificationReadView(APIView):
+    """Mark some notifications ({"ids": [..]}) or all of them ({"all": true}) as read."""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(request=None, responses={200: None})
+    def post(self, request):
+        qs = Notification.objects.filter(user=request.user, read_at__isnull=True)
+        ids = request.data.get("ids")
+        if request.data.get("all"):
+            pass
+        elif isinstance(ids, list) and all(isinstance(i, int) for i in ids):
+            qs = qs.filter(pk__in=ids)
+        else:
+            return Response({"detail": "Say which notifications to mark as read."}, status=400)
+        qs.update(read_at=timezone.now())
+        unread = Notification.objects.filter(user=request.user, read_at__isnull=True).count()
+        return Response({"unread": unread})

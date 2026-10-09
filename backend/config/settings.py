@@ -173,15 +173,18 @@ if not DEBUG:
     SECURE_REFERRER_POLICY = "same-origin"
 
 # --- Email ------------------------------------------------------------------
+# With no EMAIL_HOST, emails are printed to the server log instead of being sent (safe for development).
 if env("EMAIL_HOST"):
     EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 else:
     EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+EMAIL_TIMEOUT = int(env("EMAIL_TIMEOUT", "10"))  # seconds; a slow mail server must not hang a request
+EMAIL_USE_SSL = env_bool("EMAIL_USE_SSL", False)  # port 465; leave EMAIL_USE_TLS=false when this is true
 EMAIL_HOST = env("EMAIL_HOST")
 EMAIL_PORT = int(env("EMAIL_PORT", "587"))
 EMAIL_HOST_USER = env("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD")
-EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", True)
+EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", True) and not EMAIL_USE_SSL
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", "bookyourielts.com <no-reply@bookyourielts.com>")
 
 # --- DRF --------------------------------------------------------------------

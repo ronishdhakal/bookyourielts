@@ -59,6 +59,7 @@ export interface User {
   phone: string;
   date_of_birth: string | null;
   email_verified: boolean;
+  email_notifications: boolean;
   is_staff: boolean;
   date_joined: string;
 }
@@ -285,4 +286,14 @@ export interface StaffSettings {
   low_seat_threshold: number;
   announcement: string;
   footer_disclaimer: string;
+}
+
+export interface PortalNotification {
+  id: number;
+  kind: "received" | "confirmed" | "cancelled" | "assigned" | "change_resolved";
+  title: string;
+  body: string;
+  booking_id: number | null;
+  is_read: boolean;
+  created_at: string;
 }

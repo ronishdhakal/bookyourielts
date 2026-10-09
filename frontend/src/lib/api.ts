@@ -7,6 +7,7 @@ import type {
   Inquiry,
   InquiryStatus,
   Page,
+  PortalNotification,
   SavedCandidate,
   SiteInfo,
   StaffBooking,
@@ -106,8 +107,9 @@ export const authApi = {
   register: (body: { email: string; password: string; full_name: string; phone: string }) =>
     api<User>("/auth/register/", { method: "POST", body }),
   logout: () => api<void>("/auth/logout/", { method: "POST" }),
-  updateMe: (body: Partial<Pick<User, "full_name" | "phone" | "date_of_birth">>) =>
-    api<User>("/auth/me/", { method: "PATCH", body }),
+  updateMe: (
+    body: Partial<Pick<User, "full_name" | "phone" | "date_of_birth" | "email_notifications">>,
+  ) => api<User>("/auth/me/", { method: "PATCH", body }),
   verifyEmail: (token: string) =>
     api<{ detail: string }>("/auth/verify-email/", { method: "POST", body: { token } }),
   resendVerification: () =>
@@ -232,4 +234,10 @@ export const alertApi = {
     api<DateAlert>(`/alerts/${id}/`, { method: "PATCH", body }),
   remove: (id: number) => api<void>(`/alerts/${id}/`, { method: "DELETE" }),
   seen: (id: number) => api<DateAlert>(`/alerts/${id}/seen/`, { method: "POST" }),
+};
+
+export const notificationApi = {
+  list: () => api<{ unread: number; results: PortalNotification[] }>("/notifications/"),
+  markRead: (what: { ids: number[] } | { all: true }) =>
+    api<{ unread: number }>("/notifications/read/", { method: "POST", body: what }),
 };

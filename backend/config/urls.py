@@ -25,6 +25,8 @@ api_v1 = [
     path("bookings/<int:pk>/cancel/", bookings.BookingCancelView.as_view()),
     path("bookings/<int:pk>/documents/", portal.BookingDocumentsView.as_view()),
     path("bookings/<int:pk>/change-request/", portal.BookingChangeRequestView.as_view()),
+    path("notifications/", portal.NotificationListView.as_view()),
+    path("notifications/read/", portal.NotificationReadView.as_view()),
     path("candidates/", portal.CandidateListCreate.as_view()),
     path("candidates/<int:pk>/", portal.CandidateDetail.as_view()),
     path("alerts/", portal.AlertListCreate.as_view()),

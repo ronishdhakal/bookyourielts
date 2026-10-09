@@ -16,7 +16,7 @@ from rest_framework.permissions import BasePermission
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.bookings import services
+from apps.bookings import notifications, services
 from apps.bookings.alerts import matching_sessions
 from apps.bookings.models import BookingRequest, BookingStatus, DateAlert, Inquiry, InquiryStatus
 from apps.catalog.api import SessionSerializer
@@ -223,6 +223,7 @@ class StaffBookingDetail(StaffView, generics.RetrieveUpdateAPIView):
         if new_status is not None and new_status not in BookingStatus.values:
             return Response({"status": ["Unknown status."]}, status=status.HTTP_400_BAD_REQUEST)
         if "assigned_slot" in request.data or "assigned_venue" in request.data:
+            previous = (booking.assigned_slot, booking.assigned_venue)
             slot = request.data.get("assigned_slot", booking.assigned_slot)
             if slot not in ("", *SessionSlot.values):
                 return Response(
@@ -234,9 +235,12 @@ class StaffBookingDetail(StaffView, generics.RetrieveUpdateAPIView):
                 timezone.now() if (booking.assigned_slot or booking.assigned_venue) else None
             )
             booking.save(update_fields=["assigned_slot", "assigned_venue", "assigned_at", "updated_at"])
+            if booking.assigned_at and (slot, booking.assigned_venue) != previous:
+                notifications.session_assigned(booking)
         if request.data.get("resolve_change"):
             booking.change_resolved_at = timezone.now()
             booking.save(update_fields=["change_resolved_at", "updated_at"])
+            notifications.change_resolved(booking)
         if "admin_notes" in request.data:
             booking.admin_notes = str(request.data["admin_notes"])[:5000]
             booking.save(update_fields=["admin_notes", "updated_at"])

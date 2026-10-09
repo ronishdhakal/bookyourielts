@@ -10,6 +10,7 @@ export function Profile() {
   const [name, setName] = useState(user?.full_name ?? "");
   const [phone, setPhone] = useState(user?.phone ?? "");
   const [dob, setDob] = useState(user?.date_of_birth ?? "");
+  const [emailNews, setEmailNews] = useState(user?.email_notifications ?? true);
   const [state, setState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [message, setMessage] = useState<string | null>(null);
   const [resent, setResent] = useState(false);
@@ -21,7 +22,12 @@ export function Profile() {
     setMessage(null);
     try {
       setUser(
-        await authApi.updateMe({ full_name: name.trim(), phone, date_of_birth: dob || null }),
+        await authApi.updateMe({
+          full_name: name.trim(),
+          phone,
+          date_of_birth: dob || null,
+          email_notifications: emailNews,
+        }),
       );
       setState("saved");
     } catch (err) {
@@ -77,6 +83,23 @@ export function Profile() {
                 value={dob}
                 onChange={(e) => setDob(e.target.value)}
               />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="flex cursor-pointer items-start gap-3">
+                <input
+                  type="checkbox"
+                  className="accent-crimson mt-1 h-4.5 w-4.5"
+                  checked={emailNews}
+                  onChange={(e) => setEmailNews(e.target.checked)}
+                />
+                <span>
+                  <span className="block font-semibold">Email me booking updates</span>
+                  <span className="text-muted block text-[0.875rem]">
+                    Confirmations and venue details also go to {user.email}. They always appear in
+                    your portal.
+                  </span>
+                </span>
+              </label>
             </div>
           </div>
           {state === "error" && message && (

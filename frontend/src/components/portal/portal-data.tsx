@@ -1,14 +1,17 @@
 "use client";
 
-import { createContext, useContext, useMemo } from "react";
-import { alertApi, bookingApi } from "@/lib/api";
-import type { Booking, DateAlert } from "@/lib/types";
+import { createContext, useCallback, useContext, useEffect, useMemo } from "react";
+import { alertApi, bookingApi, notificationApi } from "@/lib/api";
+import type { Booking, DateAlert, PortalNotification } from "@/lib/types";
 import { useLoader } from "@/lib/use-loader";
 import { useAuth } from "../auth-provider";
 
 interface PortalData {
   bookings: Booking[] | null;
   alerts: DateAlert[] | null;
+  notifications: PortalNotification[];
+  unread: number;
+  markRead: (what: { ids: number[] } | { all: true }) => Promise<void>;
   error: string | null;
   reload: () => void;
 }
@@ -16,6 +19,9 @@ interface PortalData {
 const Ctx = createContext<PortalData>({
   bookings: null,
   alerts: null,
+  notifications: [],
+  unread: 0,
+  markRead: async () => undefined,
   error: null,
   reload: () => undefined,
 });
@@ -25,17 +31,43 @@ export const usePortalData = () => useContext(Ctx);
 export function PortalDataProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const load = useLoader(user ? "portal-data" : null, async () => {
-    const [bookings, alerts] = await Promise.all([bookingApi.mine(), alertApi.list()]);
-    return { bookings, alerts };
+    const [bookings, alerts, notes] = await Promise.all([
+      bookingApi.mine(),
+      alertApi.list(),
+      notificationApi.list().catch(() => ({ unread: 0, results: [] })),
+    ]);
+    return { bookings, alerts, notes };
   });
+  const { reload } = load;
+  const markRead = useCallback(
+    async (what: { ids: number[] } | { all: true }) => {
+      await notificationApi.markRead(what).catch(() => undefined);
+      reload();
+    },
+    [reload],
+  );
+  // Pick up news (for example a confirmed booking) while the page stays open.
+  useEffect(() => {
+    if (!user) return;
+    const tick = () => document.visibilityState === "visible" && reload();
+    const id = window.setInterval(tick, 60_000);
+    document.addEventListener("visibilitychange", tick);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", tick);
+    };
+  }, [user, reload]);
   const value = useMemo(
     () => ({
       bookings: load.data?.bookings ?? null,
       alerts: load.data?.alerts ?? null,
+      notifications: load.data?.notes.results ?? [],
+      unread: load.data?.notes.unread ?? 0,
+      markRead,
       error: load.error,
       reload: load.reload,
     }),
-    [load.data, load.error, load.reload],
+    [load.data, load.error, load.reload, markRead],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

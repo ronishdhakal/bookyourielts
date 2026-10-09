@@ -167,3 +167,32 @@ class DateAlert(models.Model):
 
     def __str__(self) -> str:
         return f"Alert #{self.pk} for {self.user}"
+
+
+class Notification(models.Model):
+    """A message shown in the student's portal (and emailed when email is set up)."""
+
+    class Kind(models.TextChoices):
+        RECEIVED = "received", "Request received"
+        CONFIRMED = "confirmed", "Booking confirmed"
+        CANCELLED = "cancelled", "Request cancelled"
+        ASSIGNED = "assigned", "Session and venue assigned"
+        CHANGE_RESOLVED = "change_resolved", "Change request handled"
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="notifications")
+    kind = models.CharField(max_length=20, choices=Kind.choices)
+    title = models.CharField(max_length=160)
+    body = models.TextField(blank=True)
+    booking = models.ForeignKey(
+        BookingRequest, on_delete=models.CASCADE, null=True, blank=True, related_name="notifications"
+    )
+    read_at = models.DateTimeField(null=True, blank=True)
+    emailed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+        indexes = [models.Index(fields=["user", "read_at"])]
+
+    def __str__(self) -> str:
+        return f"{self.title} -> {self.user}"

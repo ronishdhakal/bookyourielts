@@ -6,6 +6,7 @@ from django.utils import timezone
 from apps.catalog.models import TestSession
 from apps.core.models import SiteSettings
 
+from . import notifications
 from .models import BookingRequest, BookingStatus, Inquiry
 
 
@@ -46,11 +47,12 @@ def create_booking(user, session_id: int, details: dict | None = None) -> tuple[
     booking = BookingRequest.objects.create(
         user=user, session=session, whatsapp_clicked_at=timezone.now(), **details
     )
+    notifications.booking_received(booking)
     return booking, True
 
 
 @transaction.atomic
-def set_booking_status(booking_id: int, new_status: str) -> BookingRequest:
+def set_booking_status(booking_id: int, new_status: str, notify: bool = True) -> BookingRequest:
     """Change a booking's status, keeping seats_booked in step. Prevents overbooking."""
     booking = BookingRequest.objects.select_for_update().get(pk=booking_id)
     session = TestSession.objects.select_for_update().get(pk=booking.session_id)
@@ -66,8 +68,14 @@ def set_booking_status(booking_id: int, new_status: str) -> BookingRequest:
         session.seats_booked = max(session.seats_booked - 1, 0)
         session.save(update_fields=["seats_booked", "updated_at"])
 
+    changed = booking.status != new_status
     booking.status = new_status
     booking.save(update_fields=["status", "updated_at"])
+    if notify and changed:
+        if new_status == BookingStatus.CONFIRMED:
+            notifications.booking_confirmed(booking)
+        elif new_status == BookingStatus.CANCELLED:
+            notifications.booking_cancelled(booking)
     return booking
 
 

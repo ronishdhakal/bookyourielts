@@ -34,6 +34,9 @@ class User(AbstractBaseUser, PermissionsMixin):
     full_name = models.CharField(max_length=120)
     phone = models.CharField(max_length=16, blank=True, help_text="Normalised as +977XXXXXXXXXX")
     email_verified = models.BooleanField(default=False)
+    email_notifications = models.BooleanField(
+        default=True, help_text="Send booking updates by email as well as in the portal."
+    )
     date_of_birth = models.DateField(null=True, blank=True)
     is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
