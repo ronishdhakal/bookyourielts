@@ -4,7 +4,7 @@ import { ProviderLogo } from "../provider-logo";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { ApiError, authApi, bookingApi, candidateApi } from "@/lib/api";
-import { FORMAT_LABELS, SLOT_TIMES, formatDate, formatLong, formatNpr } from "@/lib/format";
+import { FORMAT_LABELS, formatDate, formatLong, formatNpr } from "@/lib/format";
 import { portalHref, siteHref } from "@/lib/portal";
 import type { Booking, SavedCandidate, TestSession } from "@/lib/types";
 import { useLoader } from "@/lib/use-loader";
@@ -370,10 +370,8 @@ function SessionSummary({ s }: { s: TestSession }) {
           <dd className="font-semibold">{formatDate(s.date, { weekday: "short" })}</dd>
         </div>
         <div>
-          <dt className="text-muted text-[0.8125rem]">Session</dt>
-          <dd className="font-semibold">
-            {s.slot === "morning" ? "Morning" : "Afternoon"} · {SLOT_TIMES[s.slot]}
-          </dd>
+          <dt className="text-muted text-[0.8125rem]">Session and venue</dt>
+          <dd className="font-semibold">Confirmed after booking</dd>
         </div>
         <div>
           <dt className="text-muted text-[0.8125rem]">Fee</dt>

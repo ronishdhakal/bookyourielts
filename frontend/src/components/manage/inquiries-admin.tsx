@@ -63,7 +63,9 @@ function Row({ item, onChanged }: { item: StaffInquiry; onChanged: () => void })
       >
         <span className="min-w-0">
           <span className="block font-semibold">{current.name}</span>
-          <span className="text-muted block truncate text-[0.875rem]">{wants || "Any date"}</span>
+          <span className="text-muted block truncate text-[0.875rem]">
+            {wants || (current.message ? `Question: ${current.message}` : "General question")}
+          </span>
         </span>
         <Pill kind="inquiry" status={current.status} />
         <span className="text-muted text-[0.8125rem] sm:text-right">

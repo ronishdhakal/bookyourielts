@@ -27,7 +27,7 @@ export interface TestSession {
   weekday: string;
   provider: ProviderCode;
   provider_label: string;
-  slot: "morning" | "afternoon";
+  slot: "morning" | "afternoon" | "";
   slot_label: string;
   city: { name: string; slug: string };
   venue: { name: string; address: string } | null;
@@ -81,6 +81,9 @@ export interface Booking {
   municipality: string;
   has_passport: boolean;
   has_passport_back: boolean;
+  assigned_slot: "morning" | "afternoon" | "";
+  assigned_slot_label: string;
+  assigned_venue: string;
   candidate: number | null;
   change_request: string;
   change_requested_at: string | null;
@@ -215,6 +218,9 @@ export interface StaffBooking {
   change_request: string;
   change_requested_at: string | null;
   change_open: boolean;
+  assigned_slot: "morning" | "afternoon" | "";
+  assigned_venue: string;
+  assigned_at: string | null;
 }
 
 export interface StaffInquiry {
@@ -240,7 +246,7 @@ export interface StaffSession {
   weekday: string;
   provider: ProviderCode;
   provider_label: string;
-  slot: "morning" | "afternoon";
+  slot: "morning" | "afternoon" | "";
   city: number;
   city_name: string;
   venue: number | null;
@@ -269,6 +275,7 @@ export interface StaffMeta {
 }
 
 export interface StaffSettings {
+  general_inquiry_message_template: string;
   whatsapp_number: string;
   booking_message_template: string;
   inquiry_message_template: string;

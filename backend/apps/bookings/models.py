@@ -5,7 +5,7 @@ from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
-from apps.catalog.models import City, TestFormat, TestSession, TestType
+from apps.catalog.models import City, SessionSlot, TestFormat, TestSession, TestType
 
 
 class BookingStatus(models.TextChoices):
@@ -70,6 +70,11 @@ class BookingRequest(models.Model):
     municipality = models.CharField(max_length=80, blank=True, verbose_name="city / municipality")
     passport_front = models.FileField(upload_to=passport_upload_path, blank=True)
     passport_back = models.FileField(upload_to=passport_upload_path, blank=True)
+
+    # Set by the team after booking. The date only fixes the city; session and venue are assigned later.
+    assigned_slot = models.CharField(max_length=10, choices=SessionSlot.choices, blank=True)
+    assigned_venue = models.CharField(max_length=150, blank=True)
+    assigned_at = models.DateTimeField(null=True, blank=True)
 
     candidate = models.ForeignKey(
         Candidate, on_delete=models.SET_NULL, null=True, blank=True, related_name="booking_requests"

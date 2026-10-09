@@ -73,26 +73,21 @@ export const breadcrumbLd = (items: { name: string; path: string }[]) => ({
   })),
 });
 
-const SLOT_START: Record<string, string> = { morning: "09:00:00", afternoon: "13:00:00" };
-const SLOT_END: Record<string, string> = { morning: "12:00:00", afternoon: "16:00:00" };
-
 export const eventsLd = (sessions: TestSession[]) =>
   sessions.map((s) => ({
     "@context": "https://schema.org",
     "@type": "Event",
     name: `${s.test_type.name} (${s.format_label}) in ${s.city.name}`,
-    startDate: `${s.date}T${SLOT_START[s.slot]}+05:45`,
-    endDate: `${s.date}T${SLOT_END[s.slot]}+05:45`,
+    startDate: s.date,
     eventStatus: "https://schema.org/EventScheduled",
     eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
     location: {
       "@type": "Place",
-      name: s.venue?.name ?? `${s.city.name} test centre`,
+      name: `${s.city.name} test centre`,
       address: {
         "@type": "PostalAddress",
         addressLocality: s.city.name,
         addressCountry: "NP",
-        ...(s.venue?.address ? { streetAddress: s.venue.address } : {}),
       },
     },
     offers: {

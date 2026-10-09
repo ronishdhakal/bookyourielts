@@ -20,7 +20,7 @@ from apps.bookings import services
 from apps.bookings.alerts import matching_sessions
 from apps.bookings.models import BookingRequest, BookingStatus, DateAlert, Inquiry, InquiryStatus
 from apps.catalog.api import SessionSerializer
-from apps.catalog.models import City, Provider, TestFormat, TestSession, TestType, Venue
+from apps.catalog.models import City, Provider, SessionSlot, TestFormat, TestSession, TestType, Venue
 
 from .models import SiteSettings
 
@@ -158,8 +158,13 @@ class StaffBookingSerializer(serializers.ModelSerializer):
             "change_request",
             "change_requested_at",
             "change_open",
+            "assigned_slot",
+            "assigned_venue",
+            "assigned_at",
         ]
-        read_only_fields = [f for f in fields if f not in ("status", "admin_notes")]
+        read_only_fields = [
+            f for f in fields if f not in ("status", "admin_notes", "assigned_slot", "assigned_venue")
+        ]
 
     def get_has_passport_front(self, obj) -> bool:
         return bool(obj.passport_front)
@@ -217,6 +222,18 @@ class StaffBookingDetail(StaffView, generics.RetrieveUpdateAPIView):
         new_status = request.data.get("status")
         if new_status is not None and new_status not in BookingStatus.values:
             return Response({"status": ["Unknown status."]}, status=status.HTTP_400_BAD_REQUEST)
+        if "assigned_slot" in request.data or "assigned_venue" in request.data:
+            slot = request.data.get("assigned_slot", booking.assigned_slot)
+            if slot not in ("", *SessionSlot.values):
+                return Response(
+                    {"assigned_slot": ["Choose morning or afternoon."]}, status=status.HTTP_400_BAD_REQUEST
+                )
+            booking.assigned_slot = slot
+            booking.assigned_venue = str(request.data.get("assigned_venue", booking.assigned_venue))[:150]
+            booking.assigned_at = (
+                timezone.now() if (booking.assigned_slot or booking.assigned_venue) else None
+            )
+            booking.save(update_fields=["assigned_slot", "assigned_venue", "assigned_at", "updated_at"])
         if request.data.get("resolve_change"):
             booking.change_resolved_at = timezone.now()
             booking.save(update_fields=["change_resolved_at", "updated_at"])
@@ -404,6 +421,27 @@ class StaffSessionDetail(StaffView, generics.RetrieveUpdateDestroyAPIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+class BulkSessionsView(StaffView, APIView):
+    """Delete, hide or show several dates at once. Dates that have booking requests are never deleted."""
+
+    def post(self, request):
+        ids = request.data.get("ids")
+        action = request.data.get("action")
+        if not isinstance(ids, list) or not ids or not all(isinstance(i, int) for i in ids) or len(ids) > 500:
+            return Response({"detail": "Choose at least one date."}, status=status.HTTP_400_BAD_REQUEST)
+        qs = TestSession.objects.filter(pk__in=ids)
+        if action == "hide":
+            return Response({"updated": qs.update(is_visible=False)})
+        if action == "show":
+            return Response({"updated": qs.update(is_visible=True)})
+        if action == "delete":
+            blocked = qs.filter(booking_requests__isnull=False).distinct()
+            skipped = blocked.count()
+            deleted, _ = qs.exclude(pk__in=blocked.values("pk")).delete()
+            return Response({"deleted": deleted, "skipped": skipped})
+        return Response({"detail": "Unknown action."}, status=status.HTTP_400_BAD_REQUEST)
+
+
 class MetaView(StaffView, APIView):
     """Choices for the date form."""
 
@@ -437,6 +475,7 @@ class StaffSettingsSerializer(serializers.ModelSerializer):
             "whatsapp_number",
             "booking_message_template",
             "inquiry_message_template",
+            "general_inquiry_message_template",
             "contact_email",
             "contact_phone",
             "office_address",

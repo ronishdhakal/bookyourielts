@@ -66,11 +66,19 @@ export function SettingsAdmin() {
             />
             <TextField
               textarea
-              label="Inquiry message"
+              label="Date inquiry message"
               value={f.inquiry_message_template}
               onChange={(v) => set("inquiry_message_template", v)}
               error={errors.inquiry_message_template}
               hint="You can use {name} {city} {test_type} {format} {month}."
+            />
+            <TextField
+              textarea
+              label="General question message"
+              value={f.general_inquiry_message_template}
+              onChange={(v) => set("general_inquiry_message_template", v)}
+              error={errors.general_inquiry_message_template}
+              hint="Used when someone sends a plain question. You can use {name} {message}."
             />
           </div>
         </section>

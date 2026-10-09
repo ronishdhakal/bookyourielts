@@ -3,6 +3,7 @@ import Link from "next/link";
 import { CtaBand } from "@/components/cta-band";
 import { DateSearch } from "@/components/date-search";
 import { FaqList } from "@/components/faq-list";
+import { InquiryForm } from "@/components/inquiry-form";
 import { SessionList } from "@/components/session-list";
 import { appHref } from "@/lib/portal";
 import { pageMetadata } from "@/lib/seo";
@@ -287,6 +288,31 @@ export default async function HomePage() {
         </h2>
         <div className="panel max-w-4xl px-5 md:px-8">
           <FaqList faqs={faqs} />
+        </div>
+      </section>
+
+      <section id="ask" className="container-page scroll-mt-28 pt-20" aria-labelledby="ask-h">
+        <div className="panel grid gap-8 p-6 md:p-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,36rem)]">
+          <div>
+            <h2 id="ask-h" className="text-2xl font-bold md:text-3xl">
+              Have a question?
+            </h2>
+            <p className="text-muted mt-2 max-w-md">
+              Ask us anything about booking IELTS in Nepal: fees, formats, documents or which test
+              you need. Our team replies in English or Nepali.
+            </p>
+            <p className="mt-4">
+              Need a date that is not listed?{" "}
+              <Link
+                href="/inquire"
+                className="text-crimson font-semibold underline underline-offset-4"
+              >
+                Tell us which date you need
+              </Link>
+              .
+            </p>
+          </div>
+          <InquiryForm variant="general" idPrefix="home" />
         </div>
       </section>
 

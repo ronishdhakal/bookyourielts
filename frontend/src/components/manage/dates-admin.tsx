@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ApiError, catalogApi, manageApi } from "@/lib/api";
-import { SLOT_TIMES, formatDate, formatNpr } from "@/lib/format";
+import { formatDate, formatNpr } from "@/lib/format";
 import { portalHref, siteHref } from "@/lib/portal";
 import type { StaffSession } from "@/lib/types";
 import { useLoader } from "@/lib/use-loader";
@@ -44,6 +44,35 @@ export function DatesAdmin() {
     ),
   );
   const [error, setError] = useState<string | null>(null);
+  const [picked, setPicked] = useState<number[]>([]);
+  const [askDelete, setAskDelete] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [info, setInfo] = useState<string | null>(null);
+  const pageIds = list.data?.results.map((s) => s.id) ?? [];
+  const allPicked = pageIds.length > 0 && pageIds.every((id) => picked.includes(id));
+  const togglePick = (id: number) =>
+    setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
+
+  async function bulk(action: "delete" | "hide" | "show") {
+    setBulkBusy(true);
+    setError(null);
+    setInfo(null);
+    try {
+      const r = await manageApi.bulkSessions(picked, action);
+      setInfo(
+        action === "delete"
+          ? `${r.deleted ?? 0} deleted.${r.skipped ? ` ${r.skipped} kept because they have booking requests (hide them instead).` : ""}`
+          : `${r.updated ?? 0} ${action === "hide" ? "hidden" : "now shown"}.`,
+      );
+      setPicked([]);
+      setAskDelete(false);
+      list.reload();
+      reloadStats();
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : "Could not update the selected dates.");
+    }
+    setBulkBusy(false);
+  }
 
   async function toggle(s: StaffSession) {
     setError(null);
@@ -123,6 +152,81 @@ export function DatesAdmin() {
         </select>
       </div>
       {error && <ErrorNote message={error} />}
+      {info && (
+        <p role="status" className="mb-3 font-semibold">
+          {info}
+        </p>
+      )}
+      {picked.length > 0 && (
+        <div
+          role="region"
+          aria-label="Selected dates"
+          className="bg-ink mb-3 flex flex-wrap items-center gap-3 rounded-lg px-4 py-3 text-white"
+        >
+          <p className="font-semibold">{picked.length} selected</p>
+          {askDelete ? (
+            <div
+              role="alertdialog"
+              aria-label="Confirm delete"
+              className="flex flex-wrap items-center gap-3"
+            >
+              <span>
+                Delete {picked.length === 1 ? "this date" : `these ${picked.length} dates`}? This
+                cannot be undone.
+              </span>
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                disabled={bulkBusy}
+                onClick={() => void bulk("delete")}
+              >
+                {bulkBusy ? "Deleting…" : "Yes, delete"}
+              </button>
+              <button
+                type="button"
+                className="btn btn-sm border-white/40 text-white"
+                onClick={() => setAskDelete(false)}
+              >
+                Keep
+              </button>
+            </div>
+          ) : (
+            <>
+              <button
+                type="button"
+                className="btn btn-sm border-white/40 text-white"
+                disabled={bulkBusy}
+                onClick={() => void bulk("hide")}
+              >
+                Hide
+              </button>
+              <button
+                type="button"
+                className="btn btn-sm border-white/40 text-white"
+                disabled={bulkBusy}
+                onClick={() => void bulk("show")}
+              >
+                Show
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                disabled={bulkBusy}
+                onClick={() => setAskDelete(true)}
+              >
+                Delete selected
+              </button>
+              <button
+                type="button"
+                className="ml-auto text-sm underline"
+                onClick={() => setPicked([])}
+              >
+                Clear selection
+              </button>
+            </>
+          )}
+        </div>
+      )}
 
       {list.error ? (
         <ErrorNote message={list.error} onRetry={list.reload} />
@@ -136,7 +240,22 @@ export function DatesAdmin() {
             <caption className="sr-only">Test dates</caption>
             <thead className="border-mist bg-ink/[0.03] text-muted border-b text-[0.8125rem]">
               <tr>
-                <th className="px-4 py-3 font-semibold">Date</th>
+                <th className="w-12 px-4 py-3">
+                  <input
+                    type="checkbox"
+                    aria-label="Select all dates on this page"
+                    className="accent-crimson h-4.5 w-4.5"
+                    checked={allPicked}
+                    onChange={() =>
+                      setPicked(
+                        allPicked
+                          ? picked.filter((id) => !pageIds.includes(id))
+                          : [...new Set([...picked, ...pageIds])],
+                      )
+                    }
+                  />
+                </th>
+                <th className="px-3 py-3 font-semibold">Date</th>
                 <th className="px-3 py-3 font-semibold">Exam</th>
                 <th className="px-3 py-3 font-semibold">City</th>
                 <th className="px-3 py-3 font-semibold">Fee</th>
@@ -154,13 +273,20 @@ export function DatesAdmin() {
                   key={s.id}
                   className={`hover:bg-ink/[0.03] ${s.is_visible ? "" : "text-muted"}`}
                 >
-                  <td className="px-4 py-3 whitespace-nowrap">
+                  <td className="px-4 py-3">
+                    <input
+                      type="checkbox"
+                      aria-label={`Select ${formatDate(s.date)} ${s.city_name}`}
+                      className="accent-crimson h-4.5 w-4.5"
+                      checked={picked.includes(s.id)}
+                      onChange={() => togglePick(s.id)}
+                    />
+                  </td>
+                  <td className="px-3 py-3 whitespace-nowrap">
                     <p className="font-semibold">
                       {formatDate(s.date, { weekday: "short", year: undefined })}
                     </p>
-                    <p className="text-muted text-[0.8125rem]">
-                      {s.date.slice(0, 4)} · {s.slot === "morning" ? "Morning" : "Afternoon"}
-                    </p>
+                    <p className="text-muted text-[0.8125rem]">{s.date.slice(0, 4)}</p>
                   </td>
                   <td className="px-3 py-3">
                     <p className="flex items-center gap-2">
@@ -210,6 +336,16 @@ export function DatesAdmin() {
           <ul className="divide-mist divide-y md:hidden">
             {list.data.results.map((s) => (
               <li key={s.id} className={`px-4 py-3.5 ${s.is_visible ? "" : "bg-ink/[0.03]"}`}>
+                <label className="mb-2 flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    aria-label={`Select ${formatDate(s.date)} ${s.city_name}`}
+                    className="accent-crimson h-4.5 w-4.5"
+                    checked={picked.includes(s.id)}
+                    onChange={() => togglePick(s.id)}
+                  />
+                  Select
+                </label>
                 <div className="flex items-start justify-between gap-3">
                   <Link href={portalHref(`/manage/dates/${s.id}`)} className="min-w-0">
                     <p className="font-semibold">
@@ -252,9 +388,7 @@ export function DatesAdmin() {
 interface Form {
   date: string;
   provider: string;
-  slot: string;
   city: string;
-  venue: string;
   test_type: string;
   format: string;
   fee_npr: string;
@@ -269,9 +403,7 @@ interface Form {
 const EMPTY: Form = {
   date: "",
   provider: "british_council",
-  slot: "morning",
   city: "",
-  venue: "",
   test_type: "",
   format: "computer",
   fee_npr: "",
@@ -287,9 +419,7 @@ function fromSession(s: StaffSession): Form {
   return {
     date: s.date,
     provider: s.provider,
-    slot: s.slot,
     city: String(s.city),
-    venue: s.venue ? String(s.venue) : "",
     test_type: String(s.test_type),
     format: s.format,
     fee_npr: String(s.fee_npr),
@@ -318,7 +448,6 @@ export function DateForm({ id }: { id?: string }) {
   if (!f || !meta.data) return <SkeletonRows rows={4} />;
   const m = meta.data;
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setForm({ ...f, [k]: v });
-  const city = m.cities.find((c) => String(c.id) === f.city);
   const type = m.test_types.find((t) => String(t.id) === f.test_type);
   const err = (k: string) => errors[k];
 
@@ -338,9 +467,7 @@ export function DateForm({ id }: { id?: string }) {
     const body = {
       date: f.date,
       provider: f.provider,
-      slot: f.slot,
       city: Number(f.city),
-      venue: f.venue ? Number(f.venue) : null,
       test_type: Number(f.test_type),
       format: f.format,
       fee_npr: Number(f.fee_npr),
@@ -463,10 +590,6 @@ export function DateForm({ id }: { id?: string }) {
                   </p>
                 )}
               </div>
-              {sel("slot", "Session", f.slot, (v) => set("slot", v), [
-                { v: "morning", l: `Morning, ${SLOT_TIMES.morning}` },
-                { v: "afternoon", l: `Afternoon, ${SLOT_TIMES.afternoon}` },
-              ])}
               {sel(
                 "provider",
                 "Provider",
@@ -478,23 +601,9 @@ export function DateForm({ id }: { id?: string }) {
                 "city",
                 "City",
                 f.city,
-                (v) => setForm({ ...f, city: v, venue: "" }),
+                (v) => set("city", v),
                 m.cities.map((c) => ({ v: String(c.id), l: c.name })),
                 { blank: "Select a city", required: true },
-              )}
-              {sel(
-                "venue",
-                "Venue",
-                f.venue,
-                (v) => set("venue", v),
-                (city?.venues ?? []).map((v) => ({ v: String(v.id), l: v.name })),
-                {
-                  blank: city
-                    ? city.venues.length
-                      ? "No venue"
-                      : "No venues for this city"
-                    : "Choose a city first",
-                },
               )}
             </div>
           </section>

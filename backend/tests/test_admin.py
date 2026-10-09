@@ -102,3 +102,24 @@ def test_csv_export(admin_client, make_session, user):
         {"action": "export_selected", "_selected_action": [b.pk]},
     )
     assert res["Content-Type"].startswith("text/csv") and b.reference in res.content.decode()
+
+
+def test_bulk_create_without_sessions_makes_one_date_per_combination(admin_client, ktm):
+    from apps.catalog.models import TestType
+
+    url = "/admin/catalog/testsession/bulk-create/"
+    data = {
+        "provider": "british_council",
+        "cities": [ktm.pk],
+        "test_types": [TestType.objects.get(code="academic").pk],
+        "formats": ["computer"],
+        "first_date": (date.today() + timedelta(days=30)).isoformat(),
+        "repeat": 1,
+        "every_days": 7,
+        "fee_npr": 28000,
+        "seats_total": 20,
+        "is_visible": "on",
+    }
+    assert admin_client.post(url, data).status_code == 302
+    s = TestSession.objects.get()
+    assert s.slot == "" and s.venue is None

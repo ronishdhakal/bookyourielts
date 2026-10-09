@@ -57,3 +57,12 @@ def test_minimal_inquiry_ok(api):
 def test_rate_limited(api):
     codes = [api.post(URL, GOOD, format="json").status_code for _ in range(7)]
     assert codes[:5] == [201] * 5 and 429 in codes[5:]
+
+
+def test_general_question_uses_the_general_whatsapp_text(api):
+    res = api.post(
+        URL, {"name": "Sita", "phone": "9801234567", "message": "Do you help with visas?"}, format="json"
+    )
+    assert res.status_code == 201
+    text = parse_qs(urlparse(res.data["whatsapp_url"]).query)["text"][0]
+    assert text == "Hi, my name is Sita. I have a question about IELTS booking. Do you help with visas?"

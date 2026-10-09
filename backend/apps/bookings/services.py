@@ -96,6 +96,14 @@ def inquiry_whatsapp_url(inquiry: Inquiry) -> str:
     from urllib.parse import quote
 
     cfg = SiteSettings.load()
+    general = not (inquiry.preferred_city or inquiry.test_type or inquiry.format or inquiry.preferred_month)
+    if general:
+        text = _safe_format(
+            cfg.general_inquiry_message_template,
+            name=inquiry.name,
+            message=(inquiry.message or "").strip(),
+        ).strip()
+        return f"https://wa.me/{cfg.whatsapp_number}?text={quote(text)}"
     text = _safe_format(
         cfg.inquiry_message_template,
         name=inquiry.name,

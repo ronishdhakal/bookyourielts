@@ -4,7 +4,7 @@ import { ProviderLogo } from "../provider-logo";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { ApiError, bookingApi } from "@/lib/api";
-import { SLOT_TIMES, formatDate, formatLong, formatNpr } from "@/lib/format";
+import { formatDate, formatLong, formatNpr } from "@/lib/format";
 import { portalHref, siteHref } from "@/lib/portal";
 import type { Booking } from "@/lib/types";
 import { useLoader } from "@/lib/use-loader";
@@ -214,7 +214,12 @@ export function BookingsList() {
 function icsFor(b: Booking): string {
   const s = b.session;
   const d = s.date.replaceAll("-", "");
-  const [from, to] = s.slot === "morning" ? ["090000", "120000"] : ["130000", "160000"];
+  const slot = b.assigned_slot;
+  const times =
+    slot === "morning" ? ["090000", "120000"] : slot === "afternoon" ? ["130000", "160000"] : null;
+  const next = new Date(`${s.date}T00:00:00Z`);
+  next.setUTCDate(next.getUTCDate() + 1);
+  const dayAfter = next.toISOString().slice(0, 10).replaceAll("-", "");
   const esc = (t: string) => t.replace(/[\\;,]/g, (m) => `\\${m}`).replace(/\n/g, "\\n");
   return [
     "BEGIN:VCALENDAR",
@@ -223,10 +228,10 @@ function icsFor(b: Booking): string {
     "BEGIN:VEVENT",
     `UID:${b.reference}@bookyourielts.com`,
     `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, "").slice(0, 15)}Z`,
-    `DTSTART;TZID=Asia/Kathmandu:${d}T${from}`,
-    `DTEND;TZID=Asia/Kathmandu:${d}T${to}`,
+    times ? `DTSTART;TZID=Asia/Kathmandu:${d}T${times[0]}` : `DTSTART;VALUE=DATE:${d}`,
+    times ? `DTEND;TZID=Asia/Kathmandu:${d}T${times[1]}` : `DTEND;VALUE=DATE:${dayAfter}`,
     `SUMMARY:${esc(`${s.test_type.name} (${s.city.name})`)}`,
-    `LOCATION:${esc(s.venue ? `${s.venue.name}${s.venue.address ? `, ${s.venue.address}` : ""}` : s.city.name)}`,
+    `LOCATION:${esc(b.assigned_venue || s.city.name)}`,
     `DESCRIPTION:${esc(`Booking ${b.reference}. Bring your original passport. Speaking is a separate slot within about a week.`)}`,
     "END:VEVENT",
     "END:VCALENDAR",
@@ -480,16 +485,14 @@ export function BookingDetail({ id }: { id: string }) {
             </h2>
             <dl className="divide-mist divide-y">
               {detail("Test day", formatLong(s.date))}
+              {detail("City", s.city.name)}
               {detail(
                 "Session",
-                `${s.slot === "morning" ? "Morning" : "Afternoon"}, ${SLOT_TIMES[s.slot]}`,
+                b.assigned_slot
+                  ? b.assigned_slot_label
+                  : "To be confirmed by our team after booking",
               )}
-              {detail(
-                "Venue",
-                s.venue
-                  ? `${s.venue.name}${s.venue.address ? `, ${s.venue.address}` : ""}`
-                  : s.city.name,
-              )}
+              {detail("Venue", b.assigned_venue || "To be confirmed by our team after booking")}
               {detail("Fee", formatNpr(s.fee_npr))}
               {detail("Registration closes", formatDate(s.registration_closes_on))}
               {detail("Results from", formatDate(s.results_date))}

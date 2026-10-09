@@ -7,7 +7,7 @@ from rest_framework.test import APIClient
 
 from apps.bookings import services
 from apps.bookings.models import BookingRequest, BookingStatus, Inquiry
-from apps.catalog.models import City, TestType
+from apps.catalog.models import City, TestSession, TestType
 from apps.core.models import SiteSettings
 
 pytestmark = pytest.mark.django_db
@@ -146,7 +146,6 @@ def _payload(ktm, academic, **kw):
     base = {
         "date": str(timezone.localdate() + timedelta(days=30)),
         "provider": "british_council",
-        "slot": "morning",
         "city": ktm.pk,
         "test_type": academic.pk,
         "format": "computer",
@@ -208,3 +207,58 @@ def test_meta_has_form_choices(staff):
 
 def test_logout_clears_a_stale_session_without_csrf(api):
     assert api.post("/api/v1/auth/logout/").status_code == 204
+
+
+def test_bulk_hide_show_and_delete_dates(staff, make_session, user):
+    keep = make_session()  # has a booking, so it must survive a bulk delete
+    BookingRequest.objects.create(user=user, session=keep)
+    a, b = (
+        make_session(date=timezone.localdate() + timedelta(days=40)),
+        make_session(date=timezone.localdate() + timedelta(days=41)),
+    )
+    url = M + "sessions/bulk/"
+    assert staff.post(url, {"ids": [a.pk, b.pk], "action": "hide"}, format="json").data == {"updated": 2}
+    assert staff.get(M + "sessions/", {"visible": "false"}).data["count"] == 2
+    assert staff.post(url, {"ids": [a.pk], "action": "show"}, format="json").data == {"updated": 1}
+    res = staff.post(url, {"ids": [a.pk, b.pk, keep.pk], "action": "delete"}, format="json")
+    assert res.data == {"deleted": 2, "skipped": 1}
+    assert TestSession.objects.filter(pk=keep.pk).exists() and TestSession.objects.count() == 1
+
+
+def test_bulk_validation_and_permissions(staff, auth_api):
+    assert staff.post(M + "sessions/bulk/", {"ids": [], "action": "delete"}, format="json").status_code == 400
+    assert (
+        staff.post(M + "sessions/bulk/", {"ids": [1], "action": "explode"}, format="json").status_code == 400
+    )
+    assert (
+        auth_api.post(M + "sessions/bulk/", {"ids": [1], "action": "delete"}, format="json").status_code
+        == 403
+    )
+
+
+def test_dates_need_no_session_or_venue(staff, ktm, academic):
+    res = staff.post(M + "sessions/", _payload(ktm, academic), format="json")  # no slot, no venue
+    assert res.status_code == 201 and res.data["slot"] == "" and res.data["venue"] is None
+
+
+def test_staff_assign_session_and_venue_after_booking(staff, auth_api, make_session):
+    s = make_session()
+    b = auth_api.post("/api/v1/bookings/", {"session": s.pk}, format="json").data
+    assert b["assigned_slot"] == "" and b["assigned_venue"] == ""
+    res = staff.patch(
+        f"{M}bookings/{b['id']}/",
+        {"assigned_slot": "morning", "assigned_venue": "Kathmandu Test Centre, Baneshwor"},
+        format="json",
+    )
+    assert res.status_code == 200 and res.data["assigned_slot"] == "morning" and res.data["assigned_at"]
+    mine = auth_api.get(f"/api/v1/bookings/{b['id']}/").data
+    assert mine["assigned_slot"] == "morning" and mine["assigned_slot_label"].startswith("Morning")
+    assert mine["assigned_venue"] == "Kathmandu Test Centre, Baneshwor"
+    assert (
+        staff.patch(f"{M}bookings/{b['id']}/", {"assigned_slot": "midnight"}, format="json").status_code
+        == 400
+    )
+    cleared = staff.patch(
+        f"{M}bookings/{b['id']}/", {"assigned_slot": "", "assigned_venue": ""}, format="json"
+    )
+    assert cleared.data["assigned_at"] is None

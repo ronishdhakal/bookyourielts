@@ -54,7 +54,6 @@ export default async function CityPage({
   const fees = open.map((s) => s.fee_npr);
   const typeNames = [...new Set(open.map((s) => s.test_type.name))];
   const hasWop = open.some((s) => s.format === "computer_wop");
-  const venue = open.find((s) => s.venue)?.venue;
 
   const cityFaqs = [
     {
@@ -118,9 +117,8 @@ export default async function CityPage({
           <p>
             {city.name} is one of the cities in Nepal where IELTS is held.
             {typeNames.length > 0 && ` Right now you can book ${typeNames.join(", ")} here.`}
-            {venue &&
-              ` Test sessions are held at ${venue.name}${venue.address ? `, ${venue.address}` : ""}.`}{" "}
-            Arrive early on test day with your original passport, the same one you used to register.
+            {" Your session time and test venue are confirmed after you book."} Arrive early on test
+            day with your original passport, the same one you used to register.
           </p>
           <p>
             Not in {city.name}? Students often choose a different city to get an earlier date.

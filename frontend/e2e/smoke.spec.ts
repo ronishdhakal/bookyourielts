@@ -225,8 +225,9 @@ test("find a date: filters, list and month views, and the booking panel", async 
   await register(page, "/portal/dates");
   await expect(page.getByRole("heading", { name: "Find a date", level: 1 })).toBeVisible();
   await page.getByLabel("City", { exact: true }).selectOption("kathmandu");
-  await page.getByLabel("Test type").selectOption("academic");
   await expect(page).toHaveURL(/city=kathmandu/);
+  await page.getByLabel("Test type").selectOption("academic");
+  await expect(page).toHaveURL(/test_type=academic/);
   await expect(page.getByRole("button", { name: /^Select/ }).first()).toBeVisible();
   await expect(page.getByText(/seats left/).first()).toBeVisible();
 
@@ -420,4 +421,87 @@ test("the Book Your IELTS button leads to the portal after sign-in", async ({ pa
   await fillRegistration(page, uniqueUser());
   await expect(page).toHaveURL(/\/portal\/dates$/);
   await expect(page.getByRole("heading", { name: "Find a date", level: 1 })).toBeVisible();
+});
+
+/* ------------------------------------------------------------------ general questions, bulk dates, assignment */
+test("a general question can be sent from the home page without any WhatsApp wording first", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.waitForLoadState("networkidle");
+  const ask = page.locator("#ask");
+  await expect(ask).not.toContainText(/whatsapp/i);
+  await ask.getByLabel("Your name").fill("Sita Rai");
+  await ask.getByLabel("Mobile number").fill("9812345678");
+  await ask.getByLabel("How can we help?").fill("Which documents do I need to bring?");
+  await ask.getByRole("button", { name: "Send message" }).click();
+  await expect(ask.getByRole("heading", { name: "Thanks, we have your message" })).toBeVisible();
+  await expect(ask.getByText(/whatsapp/i).first()).toBeVisible();
+});
+
+test("the contact page has the same general question form", async ({ page }) => {
+  await page.goto("/contact");
+  await expect(page.locator("#ask").getByLabel("How can we help?")).toBeVisible();
+});
+
+test("a student can ask a question from the portal Help page and see it listed", async ({
+  page,
+}) => {
+  await register(page, "/portal/help");
+  await page.getByLabel("How can we help?").fill("Can I change my city after booking?");
+  await page.getByRole("button", { name: "Send message" }).click();
+  await expect(page.getByRole("heading", { name: "Thanks, we have your message" })).toBeVisible();
+  await expect(page.getByText("Can I change my city after booking?")).toBeVisible();
+});
+
+test("staff can select dates and delete them in bulk", async ({ page }) => {
+  await adminLogin(page);
+  await adminNav(page, /^Test dates/);
+  await page.getByRole("link", { name: "Add a date" }).click();
+  await page.getByLabel("Test date").fill("2020-03-14");
+  await page.getByLabel("City").selectOption({ label: "Kathmandu" });
+  await page.getByLabel(/^Test type/).selectOption({ index: 1 });
+  await page.getByLabel(/^Fee/).fill("25000");
+  await page.getByLabel(/^Seats in total/).fill("20");
+  await page.getByRole("button", { name: "Add date" }).click();
+  await expect(page.getByRole("heading", { name: "Test dates", level: 1 })).toBeVisible();
+  await page.getByRole("tab", { name: "Past" }).click();
+  await page
+    .getByRole("checkbox", { name: /^Select .*14 Mar/ })
+    .first()
+    .check();
+  await expect(page.getByText("1 selected")).toBeVisible();
+  await page.getByRole("button", { name: "Delete selected" }).click();
+  await page.getByRole("button", { name: "Yes, delete" }).click();
+  await expect(page.getByText(/1 deleted/)).toBeVisible();
+});
+
+test("staff assign the session and venue after booking and the student sees them", async ({
+  page,
+  browser,
+}) => {
+  const sctx = await browser.newContext();
+  await sctx.route("https://wa.me/**", (r) => r.fulfill({ body: "ok" }));
+  const sp = await sctx.newPage();
+  await register(sp, "/portal/dates?city=chitwan");
+  await sp
+    .getByRole("button", { name: /^Select/ })
+    .first()
+    .click();
+  await expect(sp.getByRole("dialog")).toContainText("Confirmed after booking");
+  await fillDetails(sp, { province: "Bagmati", district: "Chitwan", city: "Bharatpur" });
+  const reference = await confirmBooking(sp);
+
+  await adminLogin(page);
+  await page.goto(`/portal/manage/bookings?q=${reference}`);
+  await page.getByRole("link", { name: reference }).first().click();
+  await expect(page.getByRole("heading", { name: "Session and venue" })).toBeVisible();
+  await page.getByLabel("Session", { exact: true }).selectOption("afternoon");
+  await page.getByRole("textbox", { name: "Venue" }).fill("Test Centre, Bharatpur");
+  await page.getByRole("button", { name: "Save assignment" }).click();
+  await expect(page.getByText("Saved").first()).toBeVisible();
+
+  await sp.getByRole("dialog").getByRole("link", { name: "View this request" }).click();
+  await expect(sp.getByText("Test Centre, Bharatpur")).toBeVisible();
+  await sctx.close();
 });

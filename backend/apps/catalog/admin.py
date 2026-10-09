@@ -57,7 +57,10 @@ class BulkCreateForm(forms.Form):
         choices=TestFormat.choices, widget=forms.CheckboxSelectMultiple, initial=[TestFormat.COMPUTER]
     )
     slots = forms.MultipleChoiceField(
-        choices=SessionSlot.choices, widget=forms.CheckboxSelectMultiple, initial=[SessionSlot.MORNING]
+        choices=SessionSlot.choices,
+        widget=forms.CheckboxSelectMultiple,
+        required=False,
+        help_text="Normally leave both unticked: the session is assigned to each booking afterwards.",
     )
     first_date = forms.DateField(widget=forms.DateInput(attrs={"type": "date"}))
     repeat = forms.IntegerField(
@@ -112,7 +115,18 @@ class TestSessionAdmin(ModelAdmin):
     actions_list = ["bulk_create"]
     list_per_page = 50
     fieldsets = (
-        ("When and where", {"fields": ("date", "provider", "slot", "city", "venue")}),
+        ("When and where", {"fields": ("date", "provider", "city")}),
+        (
+            "Session and venue (optional)",
+            {
+                "fields": ("slot", "venue"),
+                "classes": ("collapse",),
+                "description": (
+                    "Normally empty. Only the city is fixed on a date; the team assigns "
+                    "the session and venue to each booking afterwards."
+                ),
+            },
+        ),
         ("Test", {"fields": ("test_type", "format", "fee_npr")}),
         (
             "Seats",
@@ -195,13 +209,13 @@ class TestSessionAdmin(ModelAdmin):
                 for i in range(d["repeat"]):
                     day = d["first_date"] + timedelta(days=i * d["every_days"])
                     for city in d["cities"]:
-                        venue = city.venues.filter(is_active=True).first()
+                        venue = None  # the venue is assigned per booking, not fixed on the date
                         for tt in d["test_types"]:
                             for fmt in d["formats"]:
                                 if tt.is_ukvi and fmt == TestFormat.COMPUTER_WOP:
-                                    skipped += len(d["slots"])
+                                    skipped += len(d["slots"]) or 1
                                     continue
-                                for slot in d["slots"]:
+                                for slot in d["slots"] or [""]:
                                     _, was_created = TestSession.objects.get_or_create(
                                         date=day,
                                         provider=d["provider"],

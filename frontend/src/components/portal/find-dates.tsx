@@ -6,7 +6,6 @@ import { useMemo, useState } from "react";
 import { ApiError, alertApi, catalogApi } from "@/lib/api";
 import {
   FORMAT_SHORT,
-  SLOT_TIMES,
   formatDate,
   formatLong,
   formatNpr,
@@ -159,7 +158,8 @@ export function FindDates() {
         <div>
           <h1 className="text-2xl font-bold md:text-3xl">Find a date</h1>
           <p className="text-muted mt-1">
-            Browse every open date, then book it in a panel without leaving this page.
+            Browse every open date, then book it in a panel. Only the city is fixed on a date: your
+            session and venue are confirmed by our team after you book.
           </p>
         </div>
         <div
@@ -318,10 +318,6 @@ export function FindDates() {
                     <div>
                       <p className="font-bold">
                         {formatDate(s.date, { weekday: "short", year: undefined })}
-                      </p>
-                      <p className="text-muted text-[0.8125rem]">
-                        {s.slot === "morning" ? "Morning" : "Afternoon"} ·{" "}
-                        {(SLOT_TIMES[s.slot] ?? "").split(" – ")[0]}
                       </p>
                     </div>
                     <div className="min-w-0">
@@ -492,9 +488,7 @@ function MonthView({
                       <p className="text-muted text-[0.8125rem]">
                         {s.city.name} · {FORMAT_SHORT[s.format]}
                       </p>
-                      <p className="text-muted text-[0.8125rem]">
-                        {s.slot === "morning" ? "Morning" : "Afternoon"} · {formatNpr(s.fee_npr)}
-                      </p>
+                      <p className="text-muted text-[0.8125rem]">{formatNpr(s.fee_npr)}</p>
                     </div>
                     <SeatChip
                       status={s.seat_status}

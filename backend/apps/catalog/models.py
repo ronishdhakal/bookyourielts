@@ -112,7 +112,13 @@ class TestSession(models.Model):
         default=Provider.BRITISH_COUNCIL,
         help_text="The organisation that runs this test session.",
     )
-    slot = models.CharField(max_length=10, choices=SessionSlot.choices, default=SessionSlot.MORNING)
+    slot = models.CharField(
+        max_length=10,
+        choices=SessionSlot.choices,
+        blank=True,
+        default="",
+        help_text="Usually left empty. Morning or afternoon is assigned to each booking after it is made.",
+    )
     city = models.ForeignKey(City, on_delete=models.PROTECT, related_name="sessions")
     venue = models.ForeignKey(Venue, on_delete=models.PROTECT, null=True, blank=True, related_name="sessions")
     test_type = models.ForeignKey(TestType, on_delete=models.PROTECT, related_name="sessions")
@@ -153,9 +159,7 @@ class TestSession(models.Model):
         ]
 
     def __str__(self) -> str:
-        return (
-            f"{self.date:%d %b %Y} {self.get_slot_display().split(' ')[0]} · {self.city} · {self.test_type}"
-        )
+        return f"{self.date:%d %b %Y} · {self.city} · {self.test_type}"
 
     def clean(self):
         if self.test_type_id and self.test_type.is_ukvi and self.format == TestFormat.COMPUTER_WOP:

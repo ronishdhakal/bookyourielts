@@ -1,6 +1,6 @@
 import { ProviderLogo } from "./provider-logo";
 import Link from "next/link";
-import { FORMAT_SHORT, SLOT_TIMES, formatDate, formatNpr } from "@/lib/format";
+import { FORMAT_SHORT, formatDate, formatNpr } from "@/lib/format";
 import { appHref } from "@/lib/portal";
 import type { TestSession } from "@/lib/types";
 import { SeatChip } from "./seat-chip";
@@ -94,9 +94,6 @@ export function SessionList({
             <tr key={s.id} className="hover:bg-[#fafbfc]">
               <td className="px-5 py-3.5 whitespace-nowrap">
                 <p className="font-semibold">{formatDate(s.date, { weekday: "short" })}</p>
-                <p className="text-muted text-[0.8125rem]">
-                  {s.slot === "morning" ? "Morning" : "Afternoon"} · {SLOT_TIMES[s.slot]}
-                </p>
               </td>
               <td className="px-3 py-3.5">
                 <p className="flex items-center gap-2 font-semibold">
@@ -148,9 +145,8 @@ export function SessionList({
             </div>
             {!compact && (
               <p className="text-muted mt-2 text-[0.8125rem]">
-                {s.slot === "morning" ? "Morning" : "Afternoon"} · Register by{" "}
-                {formatDate(s.registration_closes_on, { year: undefined })} · Results from{" "}
-                {formatDate(s.results_date, { year: undefined })}
+                Register by {formatDate(s.registration_closes_on, { year: undefined })} · Results
+                from {formatDate(s.results_date, { year: undefined })}
               </p>
             )}
             <div className="mt-3 flex items-center justify-between gap-4">
@@ -160,6 +156,10 @@ export function SessionList({
           </li>
         ))}
       </ul>
+      <p className="border-mist text-muted border-t bg-[#f7f8fa] px-5 py-3 text-[0.8125rem]">
+        Only the city is fixed on a date. Your session (morning or afternoon) and the test venue are
+        confirmed by our team after you book.
+      </p>
     </div>
   );
 }

@@ -17,14 +17,22 @@ interface Prefill {
 }
 
 export function InquiryForm({
-  cities,
-  types,
-  prefill,
+  cities = [],
+  types = [],
+  prefill = {},
+  variant = "dates",
+  idPrefix = "inq",
+  onSent,
 }: {
-  cities: City[];
-  types: TestType[];
-  prefill: Prefill;
+  cities?: City[];
+  types?: TestType[];
+  prefill?: Prefill;
+  /** "dates" asks which date you want; "general" is a plain question. */
+  variant?: "dates" | "general";
+  idPrefix?: string;
+  onSent?: () => void;
 }) {
+  const general = variant === "general";
   const { user } = useAuth();
   const [v, setV] = useState({
     name: "",
@@ -67,6 +75,7 @@ export function InquiryForm({
       const em = validateEmail(v.email);
       if (em) found.email = em;
     }
+    if (general && v.message.trim().length < 5) found.message = "Tell us how we can help.";
     setErrs(found);
     setError(null);
     if (Object.keys(found).length) return;
@@ -83,6 +92,7 @@ export function InquiryForm({
         message: v.message,
       });
       setDone(res);
+      onSent?.();
     } catch (err) {
       if (err instanceof ApiError) {
         const mapped: Record<string, string> = {};
@@ -100,10 +110,13 @@ export function InquiryForm({
   if (done) {
     return (
       <div role="status" className="border-ok bg-white-ish max-w-2xl rounded-md border-2 p-6">
-        <h2 className="text-3xl font-bold">Thanks, we have your inquiry</h2>
+        <h2 className="text-3xl font-bold">
+          {general ? "Thanks, we have your message" : "Thanks, we have your inquiry"}
+        </h2>
         <p className="text-muted mt-3">
-          We will contact you when a matching date opens. To hear back faster, you can message us
-          now.
+          {general
+            ? "Our team will reply to you soon. To hear back faster, you can message us now."
+            : "We will contact you when a matching date opens. To hear back faster, you can message us now."}
         </p>
         <div className="mt-5 flex flex-col gap-3 sm:flex-row">
           <a
@@ -114,9 +127,22 @@ export function InquiryForm({
           >
             Continue on WhatsApp
           </a>
-          <Link href="/ielts-test-dates" className="btn btn-outline">
-            Back to test dates
-          </Link>
+          {general ? (
+            <button
+              type="button"
+              className="btn btn-outline"
+              onClick={() => {
+                setDone(null);
+                setV((s) => ({ ...s, message: "" }));
+              }}
+            >
+              Send another message
+            </button>
+          ) : (
+            <Link href="/ielts-test-dates" className="btn btn-outline">
+              Back to test dates
+            </Link>
+          )}
         </div>
       </div>
     );
@@ -155,59 +181,66 @@ export function InquiryForm({
         onChange={set("email")}
         error={errs.email}
       />
-      <div className="grid gap-5 sm:grid-cols-2">
-        <Sel
-          label="Preferred city"
-          value={v.city}
-          onChange={set("city")}
-          any="Any city"
-          error={errs.city}
-        >
-          {cities.map((c) => (
-            <option key={c.slug} value={c.slug}>
-              {c.name}
-            </option>
-          ))}
-        </Sel>
-        <Sel
-          label="Test type"
-          value={v.test_type}
-          onChange={set("test_type")}
-          any="Not sure yet"
-          error={errs.test_type}
-        >
-          {types.map((t) => (
-            <option key={t.code} value={t.code}>
-              {t.name}
-            </option>
-          ))}
-        </Sel>
-        <Sel
-          label="Format"
-          value={v.format}
-          onChange={set("format")}
-          any="Any format"
-          error={errs.format}
-        >
-          <option value="computer">Computer-delivered</option>
-          <option value="computer_wop">Computer with Writing on Paper</option>
-        </Sel>
-        <Sel
-          label="Preferred month"
-          value={v.month}
-          onChange={set("month")}
-          any="Any month"
-          error={errs.preferred_month}
-        >
-          {months.map((m) => (
-            <option key={m.value} value={m.value}>
-              {m.label}
-            </option>
-          ))}
-        </Sel>
-      </div>
+      {!general && (
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Sel
+            prefix={idPrefix}
+            label="Preferred city"
+            value={v.city}
+            onChange={set("city")}
+            any="Any city"
+            error={errs.city}
+          >
+            {cities.map((c) => (
+              <option key={c.slug} value={c.slug}>
+                {c.name}
+              </option>
+            ))}
+          </Sel>
+          <Sel
+            prefix={idPrefix}
+            label="Test type"
+            value={v.test_type}
+            onChange={set("test_type")}
+            any="Not sure yet"
+            error={errs.test_type}
+          >
+            {types.map((t) => (
+              <option key={t.code} value={t.code}>
+                {t.name}
+              </option>
+            ))}
+          </Sel>
+          <Sel
+            prefix={idPrefix}
+            label="Format"
+            value={v.format}
+            onChange={set("format")}
+            any="Any format"
+            error={errs.format}
+          >
+            <option value="computer">Computer-delivered</option>
+            <option value="computer_wop">Computer with Writing on Paper</option>
+          </Sel>
+          <Sel
+            prefix={idPrefix}
+            label="Preferred month"
+            value={v.month}
+            onChange={set("month")}
+            any="Any month"
+            error={errs.preferred_month}
+          >
+            {months.map((m) => (
+              <option key={m.value} value={m.value}>
+                {m.label}
+              </option>
+            ))}
+          </Sel>
+        </div>
+      )}
       <TextField
-        label="Anything else we should know? (optional)"
+        label={general ? "How can we help?" : "Anything else we should know? (optional)"}
+        required={general}
         textarea
         maxLength={1000}
         value={v.message}
@@ -215,7 +248,7 @@ export function InquiryForm({
         error={errs.message}
       />
       <button type="submit" className="btn btn-primary w-full sm:w-auto" disabled={busy}>
-        {busy ? "Sending…" : "Send inquiry"}
+        {busy ? "Sending…" : general ? "Send message" : "Send inquiry"}
       </button>
     </form>
   );
@@ -228,7 +261,9 @@ function Sel({
   any,
   error,
   children,
+  prefix,
 }: {
+  prefix?: string;
   label: string;
   value: string;
   onChange: (v: string) => void;
@@ -236,7 +271,7 @@ function Sel({
   error?: string;
   children: React.ReactNode;
 }) {
-  const id = `inq-${label.replace(/\W+/g, "-").toLowerCase()}`;
+  const id = `${prefix ?? "inq"}-${label.replace(/\W+/g, "-").toLowerCase()}`;
   return (
     <div>
       <label htmlFor={id} className="field-label">

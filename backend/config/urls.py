@@ -42,6 +42,7 @@ api_v1 = [
     path("manage/inquiries/", staff.StaffInquiryList.as_view()),
     path("manage/inquiries/<int:pk>/", staff.StaffInquiryDetail.as_view()),
     path("manage/sessions/", staff.StaffSessionList.as_view()),
+    path("manage/sessions/bulk/", staff.BulkSessionsView.as_view()),
     path("manage/sessions/<int:pk>/", staff.StaffSessionDetail.as_view()),
     path("schema/", SpectacularAPIView.as_view(), name="schema"),
     path("docs/", SpectacularSwaggerView.as_view(url_name="schema")),

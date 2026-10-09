@@ -18,8 +18,8 @@ export function CtaBand({
           <Link href="/ielts-test-dates" className="btn btn-primary">
             See IELTS test dates
           </Link>
-          <Link href="/inquire" className="btn border-white/40 text-white hover:border-white">
-            Can&apos;t see your date? Ask us
+          <Link href="/contact#ask" className="btn border-white/40 text-white hover:border-white">
+            Ask us a question
           </Link>
         </div>
       </div>

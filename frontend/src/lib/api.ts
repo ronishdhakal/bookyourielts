@@ -178,7 +178,13 @@ export const manageApi = {
   booking: (id: number | string) => api<StaffBooking>(`/manage/bookings/${id}/`),
   updateBooking: (
     id: number,
-    body: { status?: BookingStatus; admin_notes?: string; resolve_change?: boolean },
+    body: {
+      status?: BookingStatus;
+      admin_notes?: string;
+      resolve_change?: boolean;
+      assigned_slot?: "" | "morning" | "afternoon";
+      assigned_venue?: string;
+    },
   ) => api<StaffBooking>(`/manage/bookings/${id}/`, { method: "PATCH", body }),
   inquiries: (p: Params, signal?: AbortSignal) =>
     api<Page<StaffInquiry>>(`/manage/inquiries/${query(p)}`, { signal }),
@@ -192,6 +198,11 @@ export const manageApi = {
   updateSession: (id: number, body: Partial<StaffSession>) =>
     api<StaffSession>(`/manage/sessions/${id}/`, { method: "PATCH", body }),
   deleteSession: (id: number) => api<void>(`/manage/sessions/${id}/`, { method: "DELETE" }),
+  bulkSessions: (ids: number[], action: "delete" | "hide" | "show") =>
+    api<{ deleted?: number; skipped?: number; updated?: number }>("/manage/sessions/bulk/", {
+      method: "POST",
+      body: { ids, action },
+    }),
   settings: () => api<StaffSettings>("/manage/settings/"),
   updateSettings: (body: Partial<StaffSettings>) =>
     api<StaffSettings>("/manage/settings/", { method: "PATCH", body }),

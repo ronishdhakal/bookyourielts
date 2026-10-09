@@ -106,7 +106,6 @@ export function Dashboard() {
                     </p>
                     <p className="mt-2 font-semibold">
                       {formatDate(upcoming.session.date, { weekday: "long" })} ·{" "}
-                      {upcoming.session.slot === "morning" ? "Morning" : "Afternoon"} ·{" "}
                       {formatNpr(upcoming.session.fee_npr)}
                     </p>
                   </div>
@@ -265,6 +264,18 @@ export function Dashboard() {
                 ))}
               </ul>
             )}
+          </section>
+
+          <section className="panel panel-pad !p-5" aria-labelledby="help-h">
+            <h2 id="help-h" className="text-lg font-bold">
+              Questions?
+            </h2>
+            <p className="text-muted mt-1 text-[0.9375rem]">
+              Ask our team, or request a date that is not listed.
+            </p>
+            <Link href={portalHref("/help")} className="btn btn-outline btn-sm mt-3">
+              Ask us
+            </Link>
           </section>
 
           <section className="panel panel-pad !p-5">

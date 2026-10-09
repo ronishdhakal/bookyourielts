@@ -33,6 +33,10 @@ class SiteSettings(models.Model):
         ),
         help_text="Placeholders: {name} {city} {test_type} {format} {month}",
     )
+    general_inquiry_message_template = models.TextField(
+        default="Hi, my name is {name}. I have a question about IELTS booking. {message}",
+        help_text="Used for general questions (not date searches). Placeholders: {name} {message}",
+    )
     contact_email = models.EmailField(blank=True)
     contact_phone = models.CharField(max_length=30, blank=True)
     office_address = models.CharField(max_length=255, blank=True)

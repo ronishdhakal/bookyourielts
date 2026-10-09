@@ -64,3 +64,6 @@ British Council or IDP, and never use their logos.
 ## Accessibility and performance
 WCAG AA contrast, keyboard-first, visible focus, 360px minimum, semantic tables and forms, labelled controls, reduced
 motion respected, server-rendered marketing pages, one font file family, no layout shift.
+
+## Sessions, venues and questions
+A date shows only the city. Session time and venue are assigned after booking and shown as "Confirmed after booking" until then. General questions use the same inquiry form (variant `general`) on the home page, the contact page and the portal Help page; the WhatsApp hand-off appears only on its success screen.

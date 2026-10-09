@@ -4,7 +4,7 @@ import { ProviderLogo } from "../provider-logo";
 import Link from "next/link";
 import { useState } from "react";
 import { ApiError, catalogApi, manageApi } from "@/lib/api";
-import { SLOT_TIMES, formatDate, formatLong, formatNpr } from "@/lib/format";
+import { formatDate, formatLong, formatNpr } from "@/lib/format";
 import { portalHref } from "@/lib/portal";
 import type { BookingStatus, StaffBooking } from "@/lib/types";
 import { useLoader } from "@/lib/use-loader";
@@ -218,6 +218,8 @@ export function BookingAdminDetail({ id }: { id: string }) {
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [slot, setSlot] = useState<string | null>(null);
+  const [venueText, setVenueText] = useState<string | null>(null);
   const b = override ?? load.data;
 
   if (load.error) return <ErrorNote message={load.error} onRetry={load.reload} />;
@@ -228,6 +230,8 @@ export function BookingAdminDetail({ id }: { id: string }) {
     status?: BookingStatus;
     admin_notes?: string;
     resolve_change?: boolean;
+    assigned_slot?: "" | "morning" | "afternoon";
+    assigned_venue?: string;
   }) {
     if (!b) return;
     setBusy(true);
@@ -270,18 +274,7 @@ export function BookingAdminDetail({ id }: { id: string }) {
               <Detail k="Test" v={`${s.provider_label} · ${s.test_type.name}`} />
               <Detail k="Format" v={s.format_label} />
               <Detail k="Test day" v={formatLong(s.date)} />
-              <Detail
-                k="Session"
-                v={`${s.slot === "morning" ? "Morning" : "Afternoon"}, ${SLOT_TIMES[s.slot]}`}
-              />
-              <Detail
-                k="Venue"
-                v={
-                  s.venue
-                    ? `${s.venue.name}${s.venue.address ? `, ${s.venue.address}` : ""}`
-                    : s.city.name
-                }
-              />
+              <Detail k="City" v={s.city.name} />
               <Detail k="Fee" v={formatNpr(s.fee_npr)} />
               <Detail
                 k="Seats"
@@ -446,6 +439,52 @@ export function BookingAdminDetail({ id }: { id: string }) {
                 {error}
               </p>
             )}
+          </section>
+
+          <section className="panel panel-pad" aria-labelledby="assign">
+            <h2 id="assign" className="text-lg font-bold">
+              Session and venue
+            </h2>
+            <p className="text-muted mt-1 text-[0.8125rem]">
+              Assigned after booking. The student sees this on their booking.
+            </p>
+            <label htmlFor="as-slot" className="field-label mt-3">
+              Session
+            </label>
+            <select
+              id="as-slot"
+              className="field-input"
+              value={slot ?? b.assigned_slot}
+              onChange={(e) => setSlot(e.target.value)}
+            >
+              <option value="">Not assigned yet</option>
+              <option value="morning">Morning, about 9:00 am to 12:00 pm</option>
+              <option value="afternoon">Afternoon, about 1:00 pm to 4:00 pm</option>
+            </select>
+            <label htmlFor="as-venue" className="field-label mt-3">
+              Venue
+            </label>
+            <input
+              id="as-venue"
+              className="field-input"
+              maxLength={150}
+              placeholder="Test centre name and address"
+              value={venueText ?? b.assigned_venue}
+              onChange={(e) => setVenueText(e.target.value)}
+            />
+            <button
+              type="button"
+              className="btn btn-dark btn-sm mt-3"
+              disabled={busy || (slot === null && venueText === null)}
+              onClick={() =>
+                void apply({
+                  assigned_slot: (slot ?? b.assigned_slot) as "" | "morning" | "afternoon",
+                  assigned_venue: venueText ?? b.assigned_venue,
+                })
+              }
+            >
+              Save assignment
+            </button>
           </section>
 
           {b.change_requested_at && (

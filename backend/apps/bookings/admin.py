@@ -48,6 +48,10 @@ class BookingRequestAdmin(ModelAdmin):
     fieldsets = (
         (None, {"fields": ("reference", "user", "student_phone", "session", "status", "admin_notes")}),
         (
+            "Session and venue (assigned after booking)",
+            {"fields": ("assigned_slot", "assigned_venue", "assigned_at")},
+        ),
+        (
             "Candidate",
             {
                 "fields": (

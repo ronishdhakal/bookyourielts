@@ -115,7 +115,9 @@ Log in at `/admin/`. The sidebar groups everything an operator needs:
   through a staff-only admin link (they are stored privately, never at a public URL). Mark requests **confirmed** (takes a seat, refuses if the date is
   full) or **cancelled** (gives the seat back). Seat counts only ever change through this path, inside a database
   transaction with row locks. Each row links to the student on WhatsApp. Export to CSV from the Actions menu.
-- **Inquiries**: students who could not find a date. Mark contacted or closed, add notes, export to CSV.
+- **Bulk actions**: tick dates in the Test dates list to hide, show or delete them together. Dates that already have booking requests are never deleted (hide them instead).
+- **Session and venue**: a date fixes only the **city**. The team assigns the morning or afternoon session and the venue to each booking afterwards (Booking requests, Session and venue); students see it on their booking page.
+- **Inquiries**: general questions (home page, contact page, portal Help) and requests for a date nobody has listed yet. Mark contacted or closed, add notes, export to CSV.
 - **Site settings**: WhatsApp number and both message templates, contact details, the low-seat threshold (default 5),
   the announcement banner and the footer disclaimer.
 - **FAQs and content blocks**: edit the text shown on the information pages. Cities (with their intro paragraph),

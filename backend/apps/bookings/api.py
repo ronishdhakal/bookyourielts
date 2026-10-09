@@ -38,6 +38,7 @@ class BookingSerializer(serializers.ModelSerializer):
     has_passport = serializers.SerializerMethodField()
     has_passport_back = serializers.SerializerMethodField()
     change_open = serializers.BooleanField(read_only=True)
+    assigned_slot_label = serializers.CharField(source="get_assigned_slot_display", read_only=True)
 
     class Meta:
         model = BookingRequest
@@ -59,6 +60,9 @@ class BookingSerializer(serializers.ModelSerializer):
             "municipality",
             "has_passport",
             "has_passport_back",
+            "assigned_slot",
+            "assigned_slot_label",
+            "assigned_venue",
             "candidate",
             "change_request",
             "change_requested_at",

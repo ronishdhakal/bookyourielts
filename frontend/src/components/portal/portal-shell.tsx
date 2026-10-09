@@ -18,6 +18,7 @@ const ICONS = {
     "M9 11a3 3 0 100-6 3 3 0 000 6zM3 20c0-3 3-5 6-5s6 2 6 5M17 11a3 3 0 100-6M21 20c0-2-1.5-3.5-4-4.5",
   bell: "M6 17h12l-1.5-2V11a4.5 4.5 0 00-9 0v4zM10 20h4",
   user: "M12 12a4 4 0 100-8 4 4 0 000 8zM4 21c0-4 4-6 8-6s8 2 8 6",
+  help: "M12 21a9 9 0 100-18 9 9 0 000 18zM9.5 9.5a2.5 2.5 0 114 2c-.8.6-1.5 1-1.5 2M12 17h.01",
 };
 
 function Icon({ d }: { d: string }) {
@@ -66,6 +67,12 @@ const NAV = [
     icon: ICONS.bell,
     match: (p: string) => p.startsWith("/alerts"),
     badge: "alerts" as const,
+  },
+  {
+    href: "/help",
+    label: "Help",
+    icon: ICONS.help,
+    match: (p: string) => p.startsWith("/help"),
   },
   {
     href: "/profile",

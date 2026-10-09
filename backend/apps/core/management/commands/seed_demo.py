@@ -13,7 +13,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.accounts.models import User
-from apps.catalog.models import City, Provider, SessionSlot, TestFormat, TestSession, TestType, Venue
+from apps.catalog.models import City, Provider, TestFormat, TestSession, TestType
 
 FEES = {
     "academic": 28000,
@@ -46,27 +46,22 @@ class Command(BaseCommand):
         types = {t.code: t for t in TestType.objects.all()}
         created = 0
         for city in City.objects.filter(is_active=True):
-            venue, _ = Venue.objects.get_or_create(
-                city=city,
-                name=f"Demo Test Centre, {city.name}",
-                defaults={"address": "Demo address (not a real venue)"},
-            )
             for week in range(1, opts["weeks"] + 1):
                 day = today + timedelta(days=7 * week + (2 if week % 2 else 0))
                 offerings = [
-                    ("academic", TestFormat.COMPUTER, SessionSlot.MORNING),
-                    ("general-training", TestFormat.COMPUTER, SessionSlot.AFTERNOON),
+                    ("academic", TestFormat.COMPUTER),
+                    ("general-training", TestFormat.COMPUTER),
                 ]
                 if city.slug in BIG_CITIES:
                     offerings += [
-                        ("academic", TestFormat.COMPUTER_WOP, SessionSlot.MORNING),
-                        ("ukvi-academic", TestFormat.COMPUTER, SessionSlot.AFTERNOON),
+                        ("academic", TestFormat.COMPUTER_WOP),
+                        ("ukvi-academic", TestFormat.COMPUTER),
                     ]
                     if week % 3 == 0:
-                        offerings.append(("life-skills", TestFormat.COMPUTER, SessionSlot.MORNING))
+                        offerings.append(("life-skills", TestFormat.COMPUTER))
                 elif week % 2:
                     continue  # smaller cities get a date every other week
-                for code, fmt, slot in offerings:
+                for code, fmt in offerings:
                     total = rng.choice([12, 20, 24, 40])
                     booked = rng.choice([0, 0, 3, total - 3, total])
                     _, was_created = TestSession.objects.get_or_create(
@@ -74,12 +69,11 @@ class Command(BaseCommand):
                         provider=Provider.IDP
                         if (city.slug in BIG_CITIES and code == "general-training")
                         else Provider.BRITISH_COUNCIL,
-                        slot=slot,
+                        slot="",  # assigned to each booking later
                         city=city,
                         test_type=types[code],
                         format=fmt,
                         defaults={
-                            "venue": venue,
                             "fee_npr": FEES[code] + (1500 if fmt == TestFormat.COMPUTER_WOP else 0),
                             "seats_total": total,
                             "seats_booked": booked,
