@@ -30,7 +30,7 @@ What you need before you start
   * nginx installed on the host and already serving your other sites (the docker ps list shows
     no container on ports 80/443, so nginx on the host is assumed). If another proxy owns 80/443,
     add the two server blocks from deploy/nginx/bookyourielts.conf to it instead.
-  * DNS for  bookyourielts.com, www.bookyourielts.com and users.bookyourielts.com  pointing at
+  * DNS for  www.bookyourielts.com and bookyourielts.com  pointing at
     the server (the deploy/nginx file assumes Cloudflare in front; see step 6 for plain Let's
     Encrypt instead).
   * The Gmail account bookyourielts@gmail.com with an App Password (Google Account > Security >
@@ -60,17 +60,17 @@ Step 2. Create the .env file (never commit it)
   Fill in at least:
     SECRET_KEY=<long random string>            python3 -c "import secrets; print(secrets.token_urlsafe(60))"
     DEBUG=false
-    ALLOWED_HOSTS=bookyourielts.com,www.bookyourielts.com,users.bookyourielts.com
-    FRONTEND_URL=https://bookyourielts.com
-    CORS_ALLOWED_ORIGINS=https://bookyourielts.com,https://users.bookyourielts.com
-    CSRF_TRUSTED_ORIGINS=https://bookyourielts.com,https://users.bookyourielts.com
-    COOKIE_DOMAIN=.bookyourielts.com
+    ALLOWED_HOSTS=www.bookyourielts.com,bookyourielts.com
+    FRONTEND_URL=https://www.bookyourielts.com
+    CORS_ALLOWED_ORIGINS=https://www.bookyourielts.com
+    CSRF_TRUSTED_ORIGINS=https://www.bookyourielts.com
+    COOKIE_DOMAIN=                             leave empty: one host only
     POSTGRES_USER=bookyourielts
     POSTGRES_PASSWORD=<strong password>
     POSTGRES_DB=bookyourielts
     ADMIN_WHATSAPP_NUMBER=97798XXXXXXXX        digits only, country code, no +
-    NEXT_PUBLIC_SITE_URL=https://bookyourielts.com
-    NEXT_PUBLIC_APP_URL=https://users.bookyourielts.com
+    NEXT_PUBLIC_SITE_URL=https://www.bookyourielts.com
+    NEXT_PUBLIC_APP_URL=                       leave empty: the portal lives at www.bookyourielts.com/portal
     NEXT_PUBLIC_WHATSAPP_NUMBER=97798XXXXXXXX
 
   Email (so students get booking updates by email as well as in their portal):
@@ -127,7 +127,7 @@ Step 6. HTTPS
 -------------
   Option A: Cloudflare in front (what the nginx file is written for)
     * Cloudflare > SSL/TLS > Origin Server > create a certificate for
-      bookyourielts.com and *.bookyourielts.com. Save it as
+      bookyourielts.com and www.bookyourielts.com. Save it as
       /etc/ssl/cloudflare/bookyourielts.pem and the key as /etc/ssl/cloudflare/bookyourielts.key
       (chmod 600 on the key).
     * Cloudflare SSL mode: Full (strict).
@@ -139,7 +139,7 @@ Step 6. HTTPS
     * apt install certbot python3-certbot-nginx
     * In deploy/nginx/bookyourielts.conf replace the ssl_certificate lines with the paths certbot
       prints, remove the CF-Connecting-IP and cloudflare-ips lines, then:
-          certbot --nginx -d bookyourielts.com -d www.bookyourielts.com -d users.bookyourielts.com
+          certbot --nginx -d www.bookyourielts.com -d bookyourielts.com
 
 Step 7. Create the first admin and check the site
 -------------------------------------------------
@@ -153,11 +153,12 @@ Step 7. Create the first admin and check the site
   BACKEND_PORT=8071 FRONTEND_PORT=3071 for blue, or 8072 and 3072 for green.)
 
   Then in a browser:
-    https://bookyourielts.com                  the public site
-    https://users.bookyourielts.com            the student portal
-    https://users.bookyourielts.com/portal/manage   the admin dashboard (log in with the admin)
-    https://bookyourielts.com/admin/           the Django admin (advanced)
-    https://bookyourielts.com/healthz          should say ok
+    https://www.bookyourielts.com                   the public site
+    https://www.bookyourielts.com/portal            the student portal (logged-in students land here)
+    https://www.bookyourielts.com/portal/manage     the admin dashboard (log in with the admin)
+    https://www.bookyourielts.com/admin/            the Django admin (advanced)
+    https://www.bookyourielts.com/healthz           should say ok
+    https://bookyourielts.com                       should redirect to www
 
   In the admin dashboard:  Settings > set the WhatsApp number and contact email; Test dates >
   add dates (or "Bulk create" in the Django admin).
