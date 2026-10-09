@@ -6,6 +6,7 @@ overview numbers, booking requests, inquiries, test dates and site settings.
 
 from datetime import timedelta
 
+from django.db import transaction
 from django.db.models import Count, F, Q, Sum
 from django.db.models.functions import TruncDate
 from django.http import FileResponse, Http404
@@ -444,6 +445,44 @@ class BulkSessionsView(StaffView, APIView):
             deleted, _ = qs.exclude(pk__in=blocked.values("pk")).delete()
             return Response({"deleted": deleted, "skipped": skipped})
         return Response({"detail": "Unknown action."}, status=status.HTTP_400_BAD_REQUEST)
+
+
+def _bulk_ids(request):
+    ids = request.data.get("ids")
+    if not isinstance(ids, list) or not ids or not all(isinstance(i, int) for i in ids) or len(ids) > 500:
+        return None
+    return ids
+
+
+class BulkBookingsView(StaffView, APIView):
+    """Delete several booking requests. Confirmed ones give their seat back first."""
+
+    def post(self, request):
+        ids = _bulk_ids(request)
+        if ids is None or request.data.get("action") != "delete":
+            return Response({"detail": "Choose at least one request."}, status=status.HTTP_400_BAD_REQUEST)
+        deleted = 0
+        for booking in BookingRequest.objects.filter(pk__in=ids):
+            with transaction.atomic():
+                if booking.status == BookingStatus.CONFIRMED:
+                    services.set_booking_status(booking.pk, BookingStatus.CANCELLED, notify=False)
+                for f in (booking.passport_front, booking.passport_back):
+                    if f:
+                        f.delete(save=False)
+                booking.delete()
+                deleted += 1
+        return Response({"deleted": deleted})
+
+
+class BulkInquiriesView(StaffView, APIView):
+    """Delete several inquiries."""
+
+    def post(self, request):
+        ids = _bulk_ids(request)
+        if ids is None or request.data.get("action") != "delete":
+            return Response({"detail": "Choose at least one inquiry."}, status=status.HTTP_400_BAD_REQUEST)
+        deleted, _ = Inquiry.objects.filter(pk__in=ids).delete()
+        return Response({"deleted": deleted})
 
 
 class MetaView(StaffView, APIView):

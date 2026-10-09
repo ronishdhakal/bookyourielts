@@ -205,6 +205,16 @@ export const manageApi = {
       method: "POST",
       body: { ids, action },
     }),
+  bulkBookings: (ids: number[]) =>
+    api<{ deleted: number }>("/manage/bookings/bulk/", {
+      method: "POST",
+      body: { ids, action: "delete" },
+    }),
+  bulkInquiries: (ids: number[]) =>
+    api<{ deleted: number }>("/manage/inquiries/bulk/", {
+      method: "POST",
+      body: { ids, action: "delete" },
+    }),
   settings: () => api<StaffSettings>("/manage/settings/"),
   updateSettings: (body: Partial<StaffSettings>) =>
     api<StaffSettings>("/manage/settings/", { method: "PATCH", body }),

@@ -262,3 +262,35 @@ def test_staff_assign_session_and_venue_after_booking(staff, auth_api, make_sess
         f"{M}bookings/{b['id']}/", {"assigned_slot": "", "assigned_venue": ""}, format="json"
     )
     assert cleared.data["assigned_at"] is None
+
+
+def test_bulk_delete_bookings_releases_confirmed_seats(staff, make_session, user, django_user_model):
+    s = make_session(seats_total=5)
+    other = django_user_model.objects.create_user("o@example.com", "Str0ng-pass-123", full_name="O")
+    a = BookingRequest.objects.create(user=user, session=s)
+    b = BookingRequest.objects.create(user=other, session=s)
+    staff.patch(f"{M}bookings/{a.pk}/", {"status": "confirmed"}, format="json")
+    s.refresh_from_db()
+    assert s.seats_booked == 1
+    res = staff.post(f"{M}bookings/bulk/", {"ids": [a.pk, b.pk], "action": "delete"}, format="json")
+    assert res.status_code == 200 and res.json() == {"deleted": 2}
+    s.refresh_from_db()
+    assert s.seats_booked == 0 and BookingRequest.objects.count() == 0
+
+
+def test_bulk_delete_inquiries(staff):
+    from apps.bookings.models import Inquiry
+
+    i1 = Inquiry.objects.create(name="A", phone="+9779812345678")
+    Inquiry.objects.create(name="B", phone="+9779812345679")
+    res = staff.post(f"{M}inquiries/bulk/", {"ids": [i1.pk], "action": "delete"}, format="json")
+    assert res.json() == {"deleted": 1} and Inquiry.objects.count() == 1
+
+
+@pytest.mark.parametrize("path", ["bookings/bulk/", "inquiries/bulk/"])
+def test_bulk_delete_validates_and_needs_staff(staff, user, path):
+    assert staff.post(f"{M}{path}", {"ids": [], "action": "delete"}, format="json").status_code == 400
+    assert staff.post(f"{M}{path}", {"ids": [1], "action": "x"}, format="json").status_code == 400
+    c = APIClient()
+    c.force_login(user)
+    assert c.post(f"{M}{path}", {"ids": [1], "action": "delete"}, format="json").status_code == 403

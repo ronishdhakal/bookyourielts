@@ -540,3 +540,35 @@ test("a confirmed booking shows up in the student's portal notifications", async
   await expect(sp.getByRole("button", { name: "Mark all as read" })).toHaveCount(0);
   await sctx.close();
 });
+
+test("staff can delete a booking request and an inquiry in bulk", async ({ page, browser }) => {
+  const sctx = await browser.newContext();
+  await sctx.route("https://wa.me/**", (r) => r.fulfill({ body: "ok" }));
+  const sp = await sctx.newPage();
+  await register(sp, "/portal/dates?city=chitwan");
+  await sp
+    .getByRole("button", { name: /^Select/ })
+    .first()
+    .click();
+  await fillDetails(sp, { province: "Bagmati", district: "Chitwan", city: "Bharatpur" });
+  const reference = await confirmBooking(sp);
+  await sctx.close();
+
+  await adminLogin(page);
+  await page.goto(`/portal/manage/bookings?q=${reference}`);
+  await page
+    .getByRole("checkbox", { name: `Select ${reference}` })
+    .first()
+    .check();
+  await page.getByRole("button", { name: "Delete selected" }).click();
+  await page.getByRole("button", { name: "Yes, delete" }).click();
+  await expect(page.getByText("1 deleted.")).toBeVisible();
+  await expect(page.getByText("No booking requests match")).toBeVisible();
+
+  await page.goto("/portal/manage/inquiries");
+  const first = page.getByRole("checkbox", { name: /^Select / }).first();
+  await first.check();
+  await page.getByRole("button", { name: "Delete selected" }).click();
+  await page.getByRole("button", { name: "Yes, delete" }).click();
+  await expect(page.getByText("1 deleted.")).toBeVisible();
+});

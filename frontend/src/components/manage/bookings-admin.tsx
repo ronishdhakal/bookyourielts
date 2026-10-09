@@ -2,6 +2,7 @@
 
 import { ProviderLogo } from "../provider-logo";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ApiError, catalogApi, manageApi } from "@/lib/api";
 import { formatDate, formatLong, formatNpr } from "@/lib/format";
@@ -17,20 +18,23 @@ import {
   Pager,
   Pill,
   SearchBox,
+  DeleteBar,
   SkeletonRows,
   Tabs,
   relativeTime,
+  useSelection,
 } from "./ui";
 
 const PAGE = 24;
 
 export function BookingsAdmin() {
   const q = useQueryState();
-  const { stats } = useStats();
+  const { stats, reload: reloadStats } = useStats();
   const status = q.get("status");
   const change = q.get("change") === "open";
   const page = Number(q.get("page") || 1);
   const cities = useLoader("cities", () => catalogApi.cities());
+  const [info, setInfo] = useState<string | null>(null);
   const list = useLoader(`bookings|${q.key}`, (signal) =>
     manageApi.bookings(
       {
@@ -44,6 +48,8 @@ export function BookingsAdmin() {
       signal,
     ),
   );
+
+  const sel = useSelection(list.data?.results.map((b) => b.id) ?? []);
 
   return (
     <>
@@ -101,6 +107,28 @@ export function BookingsAdmin() {
         </select>
       </div>
 
+      {info && (
+        <p role="status" className="mb-3 font-semibold">
+          {info}
+        </p>
+      )}
+      <DeleteBar
+        count={sel.picked.length}
+        noun="request"
+        warning="Confirmed ones give their seat back."
+        onClear={sel.clear}
+        onDelete={async () => {
+          try {
+            const r = await manageApi.bulkBookings(sel.picked);
+            setInfo(`${r.deleted} deleted.`);
+            sel.clear();
+            list.reload();
+            reloadStats();
+          } catch (e) {
+            setInfo(e instanceof ApiError ? e.message : "Could not delete.");
+          }
+        }}
+      />
       {list.error ? (
         <ErrorNote message={list.error} onRetry={list.reload} />
       ) : list.loading ? (
@@ -116,7 +144,16 @@ export function BookingsAdmin() {
             <caption className="sr-only">Booking requests</caption>
             <thead className="border-mist bg-ink/[0.03] text-muted border-b text-[0.8125rem]">
               <tr>
-                <th className="px-4 py-3 font-semibold">Reference</th>
+                <th className="w-12 px-4 py-3">
+                  <input
+                    type="checkbox"
+                    aria-label="Select all requests on this page"
+                    className="accent-crimson h-4.5 w-4.5"
+                    checked={sel.allPicked}
+                    onChange={sel.toggleAll}
+                  />
+                </th>
+                <th className="px-3 py-3 font-semibold">Reference</th>
                 <th className="px-3 py-3 font-semibold">Candidate</th>
                 <th className="px-3 py-3 font-semibold">Exam</th>
                 <th className="px-3 py-3 font-semibold">Test day</th>
@@ -127,7 +164,16 @@ export function BookingsAdmin() {
             <tbody className="divide-mist divide-y">
               {list.data.results.map((b) => (
                 <tr key={b.id} className="hover:bg-ink/[0.03]">
-                  <td className="px-4 py-3 font-mono text-[0.8125rem]">
+                  <td className="px-4 py-3">
+                    <input
+                      type="checkbox"
+                      aria-label={`Select ${b.reference}`}
+                      className="accent-crimson h-4.5 w-4.5"
+                      checked={sel.has(b.id)}
+                      onChange={() => sel.toggle(b.id)}
+                    />
+                  </td>
+                  <td className="px-3 py-3 font-mono text-[0.8125rem]">
                     <Link
                       href={portalHref(`/manage/bookings/${b.id}`)}
                       className="text-crimson font-semibold underline underline-offset-4"
@@ -168,7 +214,20 @@ export function BookingsAdmin() {
           <ul className="divide-mist divide-y md:hidden">
             {list.data.results.map((b) => (
               <li key={b.id}>
-                <Link href={portalHref(`/manage/bookings/${b.id}`)} className="block px-4 py-3.5">
+                <label className="flex items-center gap-2 px-4 pt-3 text-sm">
+                  <input
+                    type="checkbox"
+                    aria-label={`Select ${b.reference}`}
+                    className="accent-crimson h-4.5 w-4.5"
+                    checked={sel.has(b.id)}
+                    onChange={() => sel.toggle(b.id)}
+                  />
+                  Select
+                </label>
+                <Link
+                  href={portalHref(`/manage/bookings/${b.id}`)}
+                  className="block px-4 pt-2 pb-3.5"
+                >
                   <div className="flex items-start justify-between gap-3">
                     <p className="font-semibold">{b.candidate_name || b.user.full_name}</p>
                     <Pill kind="booking" status={b.status} />
@@ -218,6 +277,8 @@ export function BookingAdminDetail({ id }: { id: string }) {
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const router = useRouter();
   const [slot, setSlot] = useState<string | null>(null);
   const [venueText, setVenueText] = useState<string | null>(null);
   const b = override ?? load.data;
@@ -547,6 +608,56 @@ export function BookingAdminDetail({ id }: { id: string }) {
               )}
             </div>
             <p className="text-muted mt-2 text-[0.8125rem]">Never shown to students.</p>
+          </section>
+          <section className="panel panel-pad" aria-labelledby="del">
+            <h2 id="del" className="text-lg font-bold">
+              Delete this request
+            </h2>
+            <p className="text-muted mt-1 text-[0.8125rem]">
+              Removes it and its passport files for good. A confirmed booking gives its seat back.
+              To keep a record, cancel it instead.
+            </p>
+            {confirmDelete ? (
+              <div
+                role="alertdialog"
+                aria-label="Confirm delete"
+                className="mt-3 flex flex-wrap items-center gap-3"
+              >
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  disabled={busy}
+                  onClick={async () => {
+                    setBusy(true);
+                    try {
+                      await manageApi.bulkBookings([b.id]);
+                      reloadStats();
+                      router.push(portalHref("/manage/bookings"));
+                    } catch (e) {
+                      setError(e instanceof ApiError ? e.message : "Could not delete.");
+                      setBusy(false);
+                    }
+                  }}
+                >
+                  Yes, delete
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-outline btn-sm"
+                  onClick={() => setConfirmDelete(false)}
+                >
+                  Keep
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                className="btn btn-outline btn-sm mt-3"
+                onClick={() => setConfirmDelete(true)}
+              >
+                Delete request
+              </button>
+            )}
           </section>
         </aside>
       </div>

@@ -218,3 +218,91 @@ export function relativeTime(iso: string): string {
     year: "numeric",
   });
 }
+
+/** Tick rows on a list and act on them together. */
+export function useSelection(pageIds: number[]) {
+  const [picked, setPicked] = useState<number[]>([]);
+  const allPicked = pageIds.length > 0 && pageIds.every((id) => picked.includes(id));
+  return {
+    picked,
+    allPicked,
+    has: (id: number) => picked.includes(id),
+    toggle: (id: number) =>
+      setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id])),
+    toggleAll: () =>
+      setPicked((p) =>
+        allPicked ? p.filter((id) => !pageIds.includes(id)) : [...new Set([...p, ...pageIds])],
+      ),
+    clear: () => setPicked([]),
+  };
+}
+
+/** The bar that appears when rows are ticked: delete them after one confirmation. */
+export function DeleteBar({
+  count,
+  noun,
+  warning,
+  onDelete,
+  onClear,
+}: {
+  count: number;
+  noun: string;
+  warning?: string;
+  onDelete: () => Promise<void>;
+  onClear: () => void;
+}) {
+  const [ask, setAsk] = useState(false);
+  const [busy, setBusy] = useState(false);
+  if (count === 0) return null;
+  return (
+    <div
+      role="region"
+      aria-label={`Selected ${noun}s`}
+      className="bg-ink mb-3 flex flex-wrap items-center gap-3 rounded-lg px-4 py-3 text-white"
+    >
+      <p className="font-semibold">{count} selected</p>
+      {ask ? (
+        <div
+          role="alertdialog"
+          aria-label="Confirm delete"
+          className="flex flex-wrap items-center gap-3"
+        >
+          <span>
+            Delete {count === 1 ? `this ${noun}` : `these ${count} ${noun}s`}? This cannot be
+            undone.
+            {warning ? ` ${warning}` : ""}
+          </span>
+          <button
+            type="button"
+            className="btn btn-primary btn-sm"
+            disabled={busy}
+            onClick={async () => {
+              setBusy(true);
+              await onDelete();
+              setBusy(false);
+              setAsk(false);
+            }}
+          >
+            {busy ? "Deleting…" : "Yes, delete"}
+          </button>
+          <button
+            type="button"
+            className="btn btn-sm border-white/40 text-white"
+            onClick={() => setAsk(false)}
+          >
+            Keep
+          </button>
+        </div>
+      ) : (
+        <>
+          <button type="button" className="btn btn-primary btn-sm" onClick={() => setAsk(true)}>
+            Delete selected
+          </button>
+          <button type="button" className="ml-auto text-sm underline" onClick={onClear}>
+            Clear selection
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
