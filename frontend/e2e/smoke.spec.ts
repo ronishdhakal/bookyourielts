@@ -645,3 +645,25 @@ test("a student changes the date, and a confirmed booking waits for staff approv
   await expect(sp.getByText(/Waiting for approval/)).toHaveCount(0);
   await sctx.close();
 });
+
+test("staff add many dates at once by tapping days on a calendar", async ({ page }) => {
+  await adminLogin(page);
+  await adminNav(page, /^Test dates/);
+  await page.getByRole("link", { name: "Add many dates" }).click();
+  await expect(page.getByRole("heading", { name: "Add many dates", level: 1 })).toBeVisible();
+  await expect(page.getByLabel("Seats on each date")).toHaveValue("5");
+
+  await page.getByRole("button", { name: "Create dates" }).click();
+  await expect(page.getByText("Tap the days on the calendar.")).toBeVisible();
+
+  await page.getByLabel("City").selectOption({ label: "Kathmandu" });
+  await page.getByLabel("Test type").selectOption({ index: 1 });
+  await page.getByLabel("Fee (NPR)").fill("28000");
+  for (let i = 0; i < 24; i++) await page.getByRole("button", { name: "Later" }).click();
+  const days = page.locator('[role="grid"] button:not([disabled])');
+  await days.nth(2).click();
+  await days.nth(9).click();
+  await expect(page.getByText("2 days chosen")).toBeVisible();
+  await page.getByRole("button", { name: "Create 2 dates" }).click();
+  await expect(page.getByText(/dates? added/)).toBeVisible();
+});

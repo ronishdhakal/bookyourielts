@@ -209,6 +209,11 @@ export const manageApi = {
     }),
   messageBooking: (id: number, message: string) =>
     api<StaffBooking>(`/manage/bookings/${id}/message/`, { method: "POST", body: { message } }),
+  bulkCreateSessions: (body: Record<string, unknown>) =>
+    api<{ created: number; skipped: string[]; dates: string[] }>("/manage/sessions/bulk-create/", {
+      method: "POST",
+      body,
+    }),
   bulkBookings: (ids: number[]) =>
     api<{ deleted: number }>("/manage/bookings/bulk/", {
       method: "POST",

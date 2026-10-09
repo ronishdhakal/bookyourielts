@@ -4,7 +4,7 @@ Django admin stays available for everything else; these endpoints cover the dail
 overview numbers, booking requests, inquiries, test dates and site settings.
 """
 
-from datetime import timedelta
+from datetime import date, timedelta
 
 from django.db import transaction
 from django.db.models import Count, F, Q, Sum
@@ -489,6 +489,48 @@ def _bulk_ids(request):
     if not isinstance(ids, list) or not ids or not all(isinstance(i, int) for i in ids) or len(ids) > 500:
         return None
     return ids
+
+
+class BulkCreateSessionsView(StaffView, APIView):
+    """Create one date for each day picked, all with the same city, exam, format, fee and seats.
+
+    A day that already has the same exam, format, provider and city is skipped, never duplicated."""
+
+    MAX_DATES = 120
+
+    def post(self, request):
+        raw = request.data.get("dates")
+        if not isinstance(raw, list) or not raw or len(raw) > self.MAX_DATES:
+            return Response(
+                {"dates": [f"Choose between 1 and {self.MAX_DATES} dates."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            days = sorted({date.fromisoformat(str(d)) for d in raw})
+        except ValueError:
+            return Response({"dates": ["Every date must look like 2026-10-13."]}, status=400)
+        common = {k: v for k, v in request.data.items() if k not in ("dates", "date")}
+        common.setdefault("seats_total", 5)
+        created, skipped = [], []
+        with transaction.atomic():
+            for day in days:
+                ser = StaffSessionSerializer(data={**common, "date": day.isoformat()})
+                if not ser.is_valid():
+                    return Response(ser.errors, status=status.HTTP_400_BAD_REQUEST)
+                v = ser.validated_data
+                exists = TestSession.objects.filter(
+                    date=day,
+                    city=v["city"],
+                    test_type=v["test_type"],
+                    format=v.get("format", TestFormat.COMPUTER),
+                    provider=v.get("provider", Provider.BRITISH_COUNCIL),
+                ).exists()
+                if exists:
+                    skipped.append(day.isoformat())
+                else:
+                    ser.save()
+                    created.append(day.isoformat())
+        return Response({"created": len(created), "skipped": skipped, "dates": created})
 
 
 class BulkBookingsView(StaffView, APIView):

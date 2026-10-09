@@ -293,3 +293,35 @@ def test_bulk_delete_validates_and_needs_staff(staff, user, path):
     c = APIClient()
     c.force_login(user)
     assert c.post(f"{M}{path}", {"ids": [1], "action": "delete"}, format="json").status_code == 403
+
+
+def test_bulk_create_dates_uses_five_seats_and_skips_duplicates(staff, ktm, academic):
+    body = {
+        "city": ktm.pk,
+        "test_type": academic.pk,
+        "format": "computer",
+        "fee_npr": 28000,
+        "dates": ["2031-10-13", "2031-10-16", "2031-10-13"],
+    }
+    res = staff.post(f"{M}sessions/bulk-create/", body, format="json")
+    assert res.status_code == 200 and res.json()["created"] == 2 and res.json()["skipped"] == []
+    from apps.catalog.models import TestSession
+
+    rows = TestSession.objects.filter(date__year=2031)
+    assert rows.count() == 2 and {r.seats_total for r in rows} == {5} and all(r.is_visible for r in rows)
+    assert all(r.registration_closes_on for r in rows)  # deadlines are filled in automatically
+    again = staff.post(
+        f"{M}sessions/bulk-create/", {**body, "dates": ["2031-10-13", "2031-10-17"]}, format="json"
+    )
+    assert again.json()["created"] == 1 and again.json()["skipped"] == ["2031-10-13"]
+
+
+def test_bulk_create_dates_validates(staff, ktm, academic):
+    base = {"city": ktm.pk, "test_type": academic.pk, "fee_npr": 1000}
+    assert staff.post(f"{M}sessions/bulk-create/", {**base, "dates": []}, format="json").status_code == 400
+    assert (
+        staff.post(f"{M}sessions/bulk-create/", {**base, "dates": ["nope"]}, format="json").status_code == 400
+    )
+    assert (
+        staff.post(f"{M}sessions/bulk-create/", {"dates": ["2031-01-01"]}, format="json").status_code == 400
+    )

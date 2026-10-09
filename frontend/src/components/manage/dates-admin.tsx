@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ApiError, catalogApi, manageApi } from "@/lib/api";
 import { formatDate, formatNpr } from "@/lib/format";
-import { portalHref, siteHref } from "@/lib/portal";
+import { portalHref } from "@/lib/portal";
 import type { StaffSession } from "@/lib/types";
 import { useLoader } from "@/lib/use-loader";
 import { useQueryState } from "@/lib/use-query-state";
@@ -92,14 +92,9 @@ export function DatesAdmin() {
         lede="Dates students can book. Hidden dates are kept but not shown on the website."
         actions={
           <>
-            <a
-              href={siteHref("/admin/catalog/testsession/bulk-create/")}
-              className="btn btn-outline btn-sm"
-              target="_blank"
-              rel="noopener"
-            >
-              Bulk create ↗
-            </a>
+            <Link href={portalHref("/manage/dates/bulk")} className="btn btn-outline btn-sm">
+              Add many dates
+            </Link>
             <Link href={portalHref("/manage/dates/new")} className="btn btn-primary btn-sm">
               Add a date
             </Link>
