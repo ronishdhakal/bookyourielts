@@ -47,6 +47,7 @@ api_v1 = [
     path("manage/bookings/<int:pk>/", staff.StaffBookingDetail.as_view()),
     path("manage/bookings/<int:pk>/passport/", staff.StaffPassportView.as_view()),
     path("manage/bookings/<int:pk>/message/", staff.StaffBookingMessageView.as_view()),
+    path("manage/users/", staff.StaffUserList.as_view()),
     path("manage/inquiries/", staff.StaffInquiryList.as_view()),
     path("manage/inquiries/bulk/", staff.BulkInquiriesView.as_view()),
     path("manage/inquiries/<int:pk>/", staff.StaffInquiryDetail.as_view()),

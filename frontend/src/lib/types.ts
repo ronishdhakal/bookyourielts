@@ -256,6 +256,18 @@ export interface StaffInquiry {
   created_at: string;
 }
 
+export interface StaffUser {
+  id: number;
+  email: string;
+  full_name: string;
+  phone: string;
+  email_verified: boolean;
+  is_staff: boolean;
+  is_active: boolean;
+  date_joined: string;
+  booking_count: number;
+}
+
 export interface StaffSession {
   id: number;
   date: string;

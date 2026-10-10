@@ -325,3 +325,17 @@ def test_bulk_create_dates_validates(staff, ktm, academic):
     assert (
         staff.post(f"{M}sessions/bulk-create/", {"dates": ["2031-01-01"]}, format="json").status_code == 400
     )
+
+
+def test_staff_can_list_users_but_students_cannot(api, user, db):
+    from apps.accounts.models import User
+
+    staff = User.objects.create_user("boss@example.com", "Str0ng-pass-123", full_name="Boss", is_staff=True)
+    assert api.get("/api/v1/manage/users/").status_code in (401, 403)
+    api.force_authenticate(user)
+    assert api.get("/api/v1/manage/users/").status_code == 403
+    api.force_authenticate(staff)
+    res = api.get("/api/v1/manage/users/?role=student&q=sita")
+    assert res.status_code == 200
+    assert [u["email"] for u in res.json()["results"]] == ["student@example.com"]
+    assert res.json()["results"][0]["booking_count"] == 0

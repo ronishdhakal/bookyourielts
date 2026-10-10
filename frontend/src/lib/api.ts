@@ -12,6 +12,7 @@ import type {
   SiteInfo,
   StaffBooking,
   StaffInquiry,
+  StaffUser,
   StaffMeta,
   StaffSession,
   StaffSettings,
@@ -192,6 +193,8 @@ export const manageApi = {
   ) => api<StaffBooking>(`/manage/bookings/${id}/`, { method: "PATCH", body }),
   inquiries: (p: Params, signal?: AbortSignal) =>
     api<Page<StaffInquiry>>(`/manage/inquiries/${query(p)}`, { signal }),
+  users: (p: Params, signal?: AbortSignal) =>
+    api<Page<StaffUser>>(`/manage/users/${query(p)}`, { signal }),
   updateInquiry: (id: number, body: { status?: InquiryStatus; admin_notes?: string }) =>
     api<StaffInquiry>(`/manage/inquiries/${id}/`, { method: "PATCH", body }),
   sessions: (p: Params, signal?: AbortSignal) =>

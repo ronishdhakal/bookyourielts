@@ -17,6 +17,7 @@ from rest_framework.permissions import BasePermission
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.accounts.models import User
 from apps.bookings import notifications, services
 from apps.bookings.alerts import matching_sessions
 from apps.bookings.models import BookingRequest, BookingStatus, DateAlert, Inquiry, InquiryStatus
@@ -349,6 +350,45 @@ class StaffInquiryDetail(StaffView, generics.RetrieveUpdateAPIView):
     serializer_class = StaffInquirySerializer
     queryset = Inquiry.objects.select_related("preferred_city", "test_type")
     http_method_names = ["get", "patch", "head", "options"]
+
+
+# --------------------------------------------------------------------------- users
+class StaffUserSerializer(serializers.ModelSerializer):
+    booking_count = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = User
+        fields = [
+            "id",
+            "email",
+            "full_name",
+            "phone",
+            "email_verified",
+            "is_staff",
+            "is_active",
+            "date_joined",
+            "booking_count",
+        ]
+
+
+class StaffUserList(StaffView, generics.ListAPIView):
+    """Everyone who has registered, newest first. Read only; accounts are managed in the Django admin."""
+
+    serializer_class = StaffUserSerializer
+    filter_backends: list = []
+
+    def get_queryset(self):
+        qs = User.objects.annotate(booking_count=Count("booking_requests")).order_by("-date_joined")
+        p = self.request.query_params
+        if p.get("role") == "staff":
+            qs = qs.filter(is_staff=True)
+        elif p.get("role") == "student":
+            qs = qs.filter(is_staff=False)
+        elif p.get("role") == "unverified":
+            qs = qs.filter(email_verified=False)
+        if q := p.get("q", "").strip():
+            qs = qs.filter(Q(full_name__icontains=q) | Q(phone__icontains=q) | Q(email__icontains=q))
+        return qs
 
 
 # --------------------------------------------------------------------------- test dates

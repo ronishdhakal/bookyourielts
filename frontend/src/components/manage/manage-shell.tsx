@@ -25,6 +25,7 @@ const NAV = [
   { href: "/manage", label: "Overview", exact: true },
   { href: "/manage/bookings", label: "Booking requests", badge: "initiated" as const },
   { href: "/manage/inquiries", label: "Inquiries", badge: "inquiries" as const },
+  { href: "/manage/users", label: "Users" },
   { href: "/manage/dates", label: "Test dates" },
   { href: "/manage/settings", label: "Settings" },
 ];
