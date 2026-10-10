@@ -1,13 +1,16 @@
 import Link from "next/link";
+import { GUIDES } from "@/lib/guides";
+import { TYPE_PAGES } from "@/lib/landing";
 import { appHref } from "@/lib/portal";
 import { getSite } from "@/lib/site";
+import { fetchCities } from "@/lib/server-api";
 import { Logo } from "./logo";
 
 export async function Footer() {
-  const site = await getSite();
+  const [site, cities] = await Promise.all([getSite(), fetchCities()]);
   return (
     <footer className="on-dark bg-spruce text-board mt-20">
-      <div className="container-page grid gap-10 py-14 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
+      <div className="container-page grid gap-10 py-14 md:grid-cols-[1.4fr_1fr_1fr_1fr_1fr]">
         <div>
           <Logo onDark />
           <p className="text-board/80 mt-4 max-w-xs text-[0.9375rem]">
@@ -38,8 +41,9 @@ export async function Footer() {
         <FooterCol
           title="Book"
           links={[
-            ["/ielts-test-dates", "IELTS test dates"],
-            ["/ielts-booking-nepal", "IELTS booking in Nepal"],
+            ["/ielts-test-dates", "IELTS test dates in Nepal"],
+            ["/ielts-booking-nepal", "How to book IELTS in Nepal"],
+            ["/ielts-fee-nepal", "IELTS fee in Nepal"],
             ["/inquire", "Send an inquiry"],
             [appHref("/bookings"), "My bookings"],
           ]}
@@ -47,11 +51,18 @@ export async function Footer() {
         <FooterCol
           title="Learn"
           links={[
-            ["/ielts-fee-nepal", "IELTS fee in Nepal"],
+            ...TYPE_PAGES.map((t): [string, string] => [t.path, `${t.label} dates`]),
             ["/ielts-on-computer-nepal", "IELTS on computer"],
             ["/ielts-academic-vs-general-training", "Academic vs General Training"],
-            ["/ielts-test-dates/kathmandu", "IELTS in Kathmandu"],
+            ...GUIDES.map((g): [string, string] => [g.path, g.label]),
           ]}
+        />
+        <FooterCol
+          title="IELTS by city"
+          links={(cities ?? []).map((c): [string, string] => [
+            `/ielts-test-dates/${c.slug}`,
+            `IELTS in ${c.name}`,
+          ])}
         />
         <FooterCol
           title="Company"
