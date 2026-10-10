@@ -92,7 +92,7 @@ test.beforeEach(async ({ context }) => {
 /* ------------------------------------------------------------------ public site */
 test("home page leads with the booking, not with WhatsApp", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("IELTS test date in Nepal");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("IELTS booking in Nepal");
   await expect(page.getByRole("heading", { level: 1 })).not.toContainText(/whatsapp/i);
   await expect(page.getByRole("heading", { name: "Upcoming test dates" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Search test dates" })).toBeVisible();
@@ -101,7 +101,7 @@ test("home page leads with the booking, not with WhatsApp", async ({ page }) => 
     /\/portal\/dates$/,
   );
   await expect(page.getByText("independent service").first()).toBeVisible();
-  await expect(page.getByRole("link", { name: /^Book this date/ }).first()).toBeVisible();
+  await expect(page.getByRole("link", { name: /^Book IELTS/ }).first()).toBeVisible();
   await expect(page.locator("section").first()).not.toContainText(/whatsapp/i);
 });
 
@@ -109,14 +109,14 @@ test("filter dates, log in, and book with WhatsApp only at the last step", async
   await page.goto("/ielts-test-dates");
   const toggle = page.getByRole("button", { name: /^Filters/ });
   if (await toggle.isVisible()) await toggle.click(); // filters are collapsed on phones
-  await page.getByLabel("City").selectOption("pokhara");
+  await page.locator("#ds-city").selectOption("pokhara");
   await expect(page).toHaveURL(/city=pokhara/);
   await expect(page.getByText(/\d+ dates?/).first()).toBeVisible();
   await expect(page.locator("main")).not.toContainText(/whatsapp/i);
 
   // Anonymous students are sent to log in, then returned to the same date inside the portal.
   await page
-    .getByRole("link", { name: /^Book this date/ })
+    .getByRole("link", { name: /^Book IELTS/ })
     .first()
     .click();
   await expect(page).toHaveURL(/\/login\?next=/);
@@ -219,7 +219,7 @@ test("a signed-in student skips the marketing home and lands on their dashboard"
   await expect(page).toHaveURL(/\/portal$/);
   // The public site stays reachable on purpose.
   await page.goto("/?site=1");
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("IELTS test date in Nepal");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("IELTS booking in Nepal");
   // Students cannot open the admin dashboard.
   await page.goto("/portal/manage");
   await expect(page).toHaveURL(/\/portal$/);
@@ -228,7 +228,7 @@ test("a signed-in student skips the marketing home and lands on their dashboard"
 test("find a date: filters, list and month views, and the booking panel", async ({ page }) => {
   await register(page, "/portal/dates");
   await expect(page.getByRole("heading", { name: "Find a date", level: 1 })).toBeVisible();
-  await page.getByLabel("City", { exact: true }).selectOption("kathmandu");
+  await page.getByLabel("City").selectOption("kathmandu");
   await expect(page).toHaveURL(/city=kathmandu/);
   await page.getByLabel("Test type").selectOption("academic");
   await expect(page).toHaveURL(/test_type=academic/);

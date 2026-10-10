@@ -72,6 +72,8 @@ Step 2. Create the .env file (never commit it)
     NEXT_PUBLIC_SITE_URL=https://www.bookyourielts.com
     NEXT_PUBLIC_APP_URL=                       leave empty: the portal lives at www.bookyourielts.com/portal
     NEXT_PUBLIC_WHATSAPP_NUMBER=97798XXXXXXXX
+    REVALIDATE_URL=https://www.bookyourielts.com/revalidate    optional: refresh cached date/fee pages when the admin saves
+    REVALIDATE_SECRET=<long random string>                     same value is read by the website; leave both empty to turn it off
 
   Email (so students get booking updates by email as well as in their portal):
     EMAIL_HOST=smtp.gmail.com

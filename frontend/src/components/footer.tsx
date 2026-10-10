@@ -58,7 +58,7 @@ export async function Footer() {
           ]}
         />
         <FooterCol
-          title="IELTS by city"
+          title="Cities"
           links={(cities ?? []).map((c): [string, string] => [
             `/ielts-test-dates/${c.slug}`,
             `IELTS in ${c.name}`,

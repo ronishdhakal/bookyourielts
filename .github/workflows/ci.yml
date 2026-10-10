@@ -112,6 +112,12 @@ jobs:
           npm ci
           npm run build
           npx playwright test
+      - name: SEO audit
+        working-directory: frontend
+        run: |
+          nohup npm run start -- -p 3100 > /tmp/web.log 2>&1 &
+          for i in $(seq 1 30); do curl -fsS localhost:3100/robots.txt > /dev/null && break || sleep 1; done
+          AUDIT_BASE=http://localhost:3100 AUDIT_SITE_URL=https://bookyourielts.com node scripts/seo-audit.mjs
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

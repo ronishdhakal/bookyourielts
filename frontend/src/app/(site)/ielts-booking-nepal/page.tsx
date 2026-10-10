@@ -7,7 +7,7 @@ import { fetchCities, fetchFaqs } from "@/lib/server-api";
 export const metadata = pageMetadata({
   title: `How to Book IELTS in Nepal ${SEO_YEAR}: Step-by-Step Guide`,
   description:
-    "A plain-English guide to how to book IELTS in Nepal: choose a test type, format, city and date, register with your passport details, and what happens after you book.",
+    "How to book IELTS in Nepal: choose a test type, format, city and date, add your passport details, and see what happens after you book.",
   path: "/ielts-booking-nepal",
 });
 
@@ -136,6 +136,29 @@ export default async function IeltsBookingNepalPage() {
         <li>
           If you cannot see a date for your city, <Link href="/inquire">send us an inquiry</Link>{" "}
           and we will message you when one opens.
+        </li>
+      </ul>
+
+      <h2>More guides</h2>
+      <ul>
+        <li>
+          <Link href="/ielts-registration-deadline-nepal">
+            IELTS registration deadline in Nepal
+          </Link>
+        </li>
+        <li>
+          <Link href="/documents-required-for-ielts-nepal">Documents required for IELTS</Link>
+        </li>
+        <li>
+          <Link href="/ielts-results-date-nepal">IELTS results date in Nepal</Link>
+        </li>
+        <li>
+          <Link href="/ielts-cancellation-refund-nepal">
+            IELTS cancellation, transfer and refund
+          </Link>
+        </li>
+        <li>
+          <Link href="/ielts-test-centres-nepal">IELTS test centres and cities in Nepal</Link>
         </li>
       </ul>
 

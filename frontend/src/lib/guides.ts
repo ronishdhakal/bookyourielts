@@ -16,7 +16,7 @@ export const GUIDES: Guide[] = [
     label: "IELTS registration deadline",
     title: "IELTS Registration Deadline in Nepal: When Booking Closes",
     description:
-      "When does IELTS registration close in Nepal? Registration usually closes about six days before the test. See how to check the exact closing date for each IELTS date.",
+      "When does IELTS registration close in Nepal? It usually closes about six days before the test. See how to find the exact closing date for each IELTS date.",
   },
   {
     path: "/ielts-cancellation-refund-nepal",
@@ -30,7 +30,7 @@ export const GUIDES: Guide[] = [
     label: "IELTS results date",
     title: "IELTS Results Date in Nepal: How Long Do Results Take?",
     description:
-      "How long IELTS results take in Nepal: computer-delivered results usually in about three to five days, Writing on Paper in around thirteen. Each date shows its results date.",
+      "How long IELTS results take in Nepal: about three to five days on computer, around thirteen with Writing on Paper. Each date shows its results date.",
   },
   {
     path: "/documents-required-for-ielts-nepal",
