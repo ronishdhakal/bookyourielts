@@ -4,6 +4,10 @@ import { guide } from "@/lib/guides";
 import { pageMetadata } from "@/lib/seo";
 import { fetchCities } from "@/lib/server-api";
 
+// Rendered per request (data is cached by the fetch layer). Prerendering at build would bake in
+// an empty page, because the API is not reachable while the Docker image is built.
+export const dynamic = "force-dynamic";
+
 const g = guide("/ielts-test-centres-nepal");
 
 export const metadata = pageMetadata({

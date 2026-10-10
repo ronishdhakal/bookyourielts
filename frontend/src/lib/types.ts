@@ -153,6 +153,20 @@ export interface Faq {
   answer: string;
 }
 
+export interface PostSummary {
+  slug: string;
+  title: string;
+  excerpt: string;
+  author: string;
+  published_at: string;
+  updated_at: string;
+}
+
+export interface Post extends PostSummary {
+  body: string;
+  meta_title: string;
+}
+
 export interface ContentBlock {
   key: string;
   title: string;

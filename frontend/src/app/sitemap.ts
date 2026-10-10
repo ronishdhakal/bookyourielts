@@ -3,10 +3,12 @@ import { GUIDES } from "@/lib/guides";
 import { PROVIDER_PAGES, TYPE_PAGES, monthSlug, monthsWithSessions } from "@/lib/landing";
 import { ALWAYS_INDEXABLE_CITIES } from "@/lib/seo-config";
 import { SITE_URL } from "@/lib/seo";
-import { fetchCities, fetchOpenSessions } from "@/lib/server-api";
+import { fetchCities, fetchOpenSessions, fetchPosts } from "@/lib/server-api";
 import type { TestSession } from "@/lib/types";
 
-export const revalidate = 600;
+// Rendered per request (data is cached by the fetch layer). Prerendering at build would bake in
+// an empty page, because the API is not reachable while the Docker image is built.
+export const dynamic = "force-dynamic";
 
 /** Process start = deploy time. Used as lastmod for pages whose content only changes with a release. */
 const DEPLOYED_AT = new Date();
@@ -22,7 +24,11 @@ const latest = (sessions: TestSession[]): Date | undefined => {
  * (Google ignores changefreq and priority, so they are left out.)
  */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [cities, open] = await Promise.all([fetchCities(), fetchOpenSessions()]);
+  const [cities, open, posts] = await Promise.all([
+    fetchCities(),
+    fetchOpenSessions(),
+    fetchPosts(),
+  ]);
   const sessions = open?.results ?? [];
   const dataDate = latest(sessions) ?? DEPLOYED_AT;
   // The home canonical has no trailing slash (Next strips it), so the sitemap matches that form.
@@ -48,6 +54,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     entry("/ielts-test-dates", dataDate),
     entry("/ielts-fee-nepal", dataDate),
     ...staticPages.map((p) => entry(p, DEPLOYED_AT)),
+    ...(posts.length
+      ? [entry("/blog", new Date(posts.map((p) => p.updated_at).reduce((a, b) => (a > b ? a : b))))]
+      : []),
+    ...posts.map((p) => entry(`/blog/${p.slug}`, new Date(p.updated_at))),
     ...(cities ?? [])
       .filter((c) => ALWAYS_INDEXABLE_CITIES.includes(c.slug) || c.upcoming_count > 0)
       .map((c) =>

@@ -10,7 +10,9 @@ import { SEO_YEAR } from "@/lib/seo-config";
 import { fetchFaqs, fetchOpenSessions, fetchTestTypes } from "@/lib/server-api";
 import type { TestFormat } from "@/lib/types";
 
-export const revalidate = 600;
+// Rendered per request (data is cached by the fetch layer). Prerendering at build would bake in
+// an empty page, because the API is not reachable while the Docker image is built.
+export const dynamic = "force-dynamic";
 
 const FORMATS: TestFormat[] = ["computer", "computer_wop"];
 

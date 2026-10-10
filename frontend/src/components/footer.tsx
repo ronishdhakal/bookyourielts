@@ -67,6 +67,7 @@ export async function Footer() {
         <FooterCol
           title="Company"
           links={[
+            ["/blog", "Blog"],
             ["/about", "About us"],
             ["/contact", "Contact"],
             ["/privacy", "Privacy policy"],

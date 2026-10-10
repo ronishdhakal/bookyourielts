@@ -156,3 +156,27 @@ export const eventsLd = (sessions: TestSession[], pageUrl: string) => ({
     },
   })),
 });
+
+export const articleLd = (opts: {
+  path: string;
+  title: string;
+  description: string;
+  author: string;
+  published: string;
+  modified: string;
+}) => ({
+  "@context": "https://schema.org",
+  "@type": "Article",
+  headline: opts.title,
+  description: opts.description,
+  mainEntityOfPage: `${SITE_URL}${opts.path}`,
+  datePublished: opts.published,
+  dateModified: opts.modified,
+  author: { "@type": "Organization", name: opts.author },
+  publisher: {
+    "@type": "Organization",
+    name: SITE_NAME,
+    logo: { "@type": "ImageObject", url: `${SITE_URL}/static/logo.png` },
+  },
+  inLanguage: "en",
+});

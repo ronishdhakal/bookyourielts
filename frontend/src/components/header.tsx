@@ -12,6 +12,7 @@ const NAV = [
   { href: "/ielts-fee-nepal", label: "Fees" },
   { href: "/ielts-on-computer-nepal", label: "IELTS on computer" },
   { href: "/ielts-academic-vs-general-training", label: "Academic or General?" },
+  { href: "/blog", label: "Blog" },
   { href: "/contact", label: "Contact" },
 ];
 

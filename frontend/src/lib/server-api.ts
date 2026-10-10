@@ -4,6 +4,8 @@ import type {
   ContentBlock,
   Faq,
   Page,
+  Post,
+  PostSummary,
   SessionFilters,
   SiteInfo,
   TestSession,
@@ -14,7 +16,7 @@ const API_ORIGIN = process.env.API_ORIGIN ?? "http://localhost:8000";
 
 /** Revalidation windows (seconds). The Django side also calls /revalidate when data changes. */
 export const CATALOG_TAG = "catalog";
-const SESSIONS_TTL = 600;
+const SESSIONS_TTL = 120;
 
 async function get<T>(path: string, revalidate = 60): Promise<T | null> {
   try {
@@ -51,3 +53,8 @@ export const fetchContent = async () => (await get<ContentBlock[]>("/content/", 
 
 export const fetchSession = (id: string) =>
   get<TestSession>(`/sessions/${encodeURIComponent(id)}/`, 15);
+
+/** Published blog posts, newest first. */
+export const fetchPosts = async () => (await get<PostSummary[]>("/blog/", SESSIONS_TTL)) ?? [];
+export const fetchPost = (slug: string) =>
+  get<Post>(`/blog/${encodeURIComponent(slug)}/`, SESSIONS_TTL);

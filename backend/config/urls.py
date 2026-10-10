@@ -3,6 +3,7 @@ from django.http import HttpResponse
 from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
+from apps.blog import api as blog
 from apps.bookings import api as bookings
 from apps.bookings import portal_api as portal
 from apps.catalog import api as catalog
@@ -14,6 +15,8 @@ api_v1 = [
     path("site/", core.SiteSettingsView.as_view()),
     path("faqs/", core.FAQListView.as_view()),
     path("content/", core.ContentBlockListView.as_view()),
+    path("blog/", blog.PostListView.as_view()),
+    path("blog/<slug:slug>/", blog.PostDetailView.as_view()),
     path("auth/", include("apps.accounts.urls")),
     path("cities/", catalog.CityListView.as_view()),
     path("test-types/", catalog.TestTypeListView.as_view()),

@@ -4,6 +4,10 @@ import { pageMetadata } from "@/lib/seo";
 import { SEO_YEAR } from "@/lib/seo-config";
 import { fetchCities, fetchFaqs } from "@/lib/server-api";
 
+// Rendered per request (data is cached by the fetch layer). Prerendering at build would bake in
+// an empty page, because the API is not reachable while the Docker image is built.
+export const dynamic = "force-dynamic";
+
 export const metadata = pageMetadata({
   title: `How to Book IELTS in Nepal ${SEO_YEAR}: Step-by-Step Guide`,
   description:

@@ -14,13 +14,14 @@ from django.db import transaction
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
+from apps.blog.models import Post
 from apps.catalog.models import City, TestSession, TestType
 
 from .models import FAQ, ContentBlock, SiteSettings
 
 log = logging.getLogger(__name__)
 
-WATCHED = (TestSession, City, TestType, FAQ, ContentBlock, SiteSettings)
+WATCHED = (TestSession, City, TestType, FAQ, ContentBlock, SiteSettings, Post)
 
 
 def _post(url: str, secret: str) -> None:

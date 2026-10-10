@@ -15,6 +15,10 @@ import { JsonLd } from "@/components/json-ld";
 import { pageMetadata, websiteLd } from "@/lib/seo";
 import { fetchCities, fetchFaqs, fetchOpenSessions, fetchTestTypes } from "@/lib/server-api";
 
+// Rendered per request (data is cached by the fetch layer). Prerendering at build would bake in
+// an empty page, because the API is not reachable while the Docker image is built.
+export const dynamic = "force-dynamic";
+
 export async function generateMetadata(): Promise<Metadata> {
   const inv = summarize((await fetchOpenSessions())?.results ?? []);
   const where = inv.cityNames.length ? ` in ${inv.cityNames.join(", ")}` : "";
