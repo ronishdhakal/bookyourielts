@@ -18,8 +18,9 @@ const sans = Public_Sans({
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
+  // Pages set absolute titles through pageMetadata, so the brand is never appended twice.
   title: {
-    default: "IELTS Booking in Nepal: Test Dates, Fees & Seats | bookyourielts.com",
+    default: "IELTS Booking in Nepal: Dates, Fees & Seats",
     template: `%s | ${SITE_NAME}`,
   },
   description:
