@@ -1,42 +1,78 @@
 import type { MetadataRoute } from "next";
+import { GUIDES } from "@/lib/guides";
+import { PROVIDER_PAGES, TYPE_PAGES, monthSlug, monthsWithSessions } from "@/lib/landing";
+import { ALWAYS_INDEXABLE_CITIES } from "@/lib/seo-config";
 import { SITE_URL } from "@/lib/seo";
-import { fetchCities } from "@/lib/server-api";
+import { fetchCities, fetchOpenSessions } from "@/lib/server-api";
+import type { TestSession } from "@/lib/types";
 
-export const revalidate = 3600;
+export const revalidate = 600;
 
-const STATIC: {
-  path: string;
-  priority: number;
-  freq: MetadataRoute.Sitemap[number]["changeFrequency"];
-}[] = [
-  { path: "/", priority: 1, freq: "daily" },
-  { path: "/ielts-booking-nepal", priority: 0.9, freq: "weekly" },
-  { path: "/ielts-test-dates", priority: 0.9, freq: "daily" },
-  { path: "/ielts-fee-nepal", priority: 0.8, freq: "weekly" },
-  { path: "/ielts-on-computer-nepal", priority: 0.7, freq: "monthly" },
-  { path: "/ielts-academic-vs-general-training", priority: 0.7, freq: "monthly" },
-  { path: "/inquire", priority: 0.5, freq: "monthly" },
-  { path: "/about", priority: 0.4, freq: "yearly" },
-  { path: "/contact", priority: 0.4, freq: "yearly" },
-  { path: "/privacy", priority: 0.2, freq: "yearly" },
-  { path: "/terms", priority: 0.2, freq: "yearly" },
-];
+/** Process start = deploy time. Used as lastmod for pages whose content only changes with a release. */
+const DEPLOYED_AT = new Date();
 
+const latest = (sessions: TestSession[]): Date | undefined => {
+  const iso = sessions.map((s) => s.updated_at).reduce<string>((a, b) => (a > b ? a : b), "");
+  return iso ? new Date(iso) : undefined;
+};
+
+/**
+ * Only indexable, canonical, 200 URLs, each with a real lastmod: the newest data change among the
+ * sessions the page shows, or the deploy time for pages that only change with a release.
+ * (Google ignores changefreq and priority, so they are left out.)
+ */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const cities = (await fetchCities()) ?? [];
-  const now = new Date();
+  const [cities, open] = await Promise.all([fetchCities(), fetchOpenSessions()]);
+  const sessions = open?.results ?? [];
+  const dataDate = latest(sessions) ?? DEPLOYED_AT;
+  // The home canonical has no trailing slash (Next strips it), so the sitemap matches that form.
+  const entry = (path: string, lastModified: Date) => ({
+    url: path === "/" ? SITE_URL : `${SITE_URL}${path}`,
+    lastModified,
+  });
+
+  const staticPages = [
+    "/ielts-booking-nepal",
+    "/ielts-on-computer-nepal",
+    "/ielts-academic-vs-general-training",
+    ...GUIDES.map((g) => g.path),
+    "/inquire",
+    "/about",
+    "/contact",
+    "/privacy",
+    "/terms",
+  ];
+
   return [
-    ...STATIC.map((s) => ({
-      url: `${SITE_URL}${s.path}`,
-      lastModified: now,
-      changeFrequency: s.freq,
-      priority: s.priority,
-    })),
-    ...cities.map((c) => ({
-      url: `${SITE_URL}/ielts-test-dates/${c.slug}`,
-      lastModified: now,
-      changeFrequency: "daily" as const,
-      priority: 0.8,
-    })),
+    entry("/", dataDate),
+    entry("/ielts-test-dates", dataDate),
+    entry("/ielts-fee-nepal", dataDate),
+    ...staticPages.map((p) => entry(p, DEPLOYED_AT)),
+    ...(cities ?? [])
+      .filter((c) => ALWAYS_INDEXABLE_CITIES.includes(c.slug) || c.upcoming_count > 0)
+      .map((c) =>
+        entry(
+          `/ielts-test-dates/${c.slug}`,
+          latest(sessions.filter((s) => s.city.slug === c.slug)) ?? DEPLOYED_AT,
+        ),
+      ),
+    ...TYPE_PAGES.flatMap((t) => {
+      const match = sessions.filter(
+        (s) =>
+          (t.filters.test_type ? s.test_type.code === t.filters.test_type : s.test_type.is_ukvi) &&
+          (t.match ? t.match(s) : true),
+      );
+      return match.length ? [entry(t.path, latest(match) ?? dataDate)] : [];
+    }),
+    ...monthsWithSessions(sessions).map((m) =>
+      entry(
+        `/ielts-test-dates/${monthSlug(m)}`,
+        latest(sessions.filter((s) => s.date.startsWith(m))) ?? dataDate,
+      ),
+    ),
+    ...PROVIDER_PAGES.flatMap((p) => {
+      const match = sessions.filter((s) => s.provider === p.code);
+      return match.length ? [entry(`/ielts-test-dates/${p.slug}`, latest(match) ?? dataDate)] : [];
+    }),
   ];
 }

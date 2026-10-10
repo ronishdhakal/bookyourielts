@@ -142,6 +142,9 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # --- Frontend / CORS / CSRF -------------------------------------------------
 FRONTEND_URL = env("FRONTEND_URL", "http://localhost:3000")
+# Optional: where to ping the Next.js site to refresh cached pages when dates or fees change.
+REVALIDATE_URL = env("REVALIDATE_URL")
+REVALIDATE_SECRET = env("REVALIDATE_SECRET")
 # In development the site may run on any nearby port (3000, 3001, ...), so trust localhost on 3000-3010.
 _DEV_ORIGINS = ",".join(f"http://{h}:{p}" for p in range(3000, 3011) for h in ("localhost", "127.0.0.1"))
 CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS", _DEV_ORIGINS if DEBUG else FRONTEND_URL)

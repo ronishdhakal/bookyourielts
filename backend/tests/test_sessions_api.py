@@ -124,3 +124,29 @@ def test_session_exposes_updated_at(api, make_session):
     make_session()
     res = api.get(URL)
     assert res.data["results"][0]["updated_at"]
+
+
+def test_saving_a_session_pings_the_site_when_configured(
+    make_session, settings, monkeypatch, django_capture_on_commit_callbacks
+):
+    from apps.core import revalidate
+
+    calls = []
+    monkeypatch.setattr(revalidate, "ping_site", lambda: calls.append(1))
+    settings.REVALIDATE_URL = "https://example.test/revalidate"
+    with django_capture_on_commit_callbacks(execute=True):
+        make_session()
+    assert calls
+
+
+def test_no_ping_without_configuration(
+    make_session, settings, monkeypatch, django_capture_on_commit_callbacks
+):
+    from apps.core import revalidate
+
+    calls = []
+    monkeypatch.setattr(revalidate, "ping_site", lambda: calls.append(1))
+    settings.REVALIDATE_URL = ""
+    with django_capture_on_commit_callbacks(execute=True):
+        make_session()
+    assert not calls
