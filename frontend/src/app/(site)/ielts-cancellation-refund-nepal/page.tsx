@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { InfoPage } from "@/components/info-page";
 import { guide } from "@/lib/guides";
+import { REFUND_AND_FEES } from "@/lib/policy";
 import { pageMetadata } from "@/lib/seo";
-import { fetchContent } from "@/lib/server-api";
 
 const g = guide("/ielts-cancellation-refund-nepal");
 
@@ -12,9 +12,7 @@ export const metadata = pageMetadata({
   path: g.path,
 });
 
-export default async function Page() {
-  const blocks = await fetchContent();
-  const refund = blocks.find((b) => b.key === "cancellation-refund");
+export default function Page() {
   return (
     <InfoPage
       path={g.path}
@@ -26,12 +24,12 @@ export default async function Page() {
         {
           question: "Can I change or cancel my IELTS booking?",
           answer:
-            "Message us on WhatsApp as early as you can and quote your reference number. Rules on changes and refunds are set by the test provider and depend on how close the test date is.",
+            "Message us on WhatsApp as early as you can and quote your reference number. We will tell you what is possible for your date. " +
+            REFUND_AND_FEES.refund,
         },
         {
-          question: "Who decides whether I get a refund?",
-          answer:
-            "The test provider sets the rules for changes, transfers and refunds. We pass your request on and tell you what is possible for your date.",
+          question: "When do I get a refund?",
+          answer: REFUND_AND_FEES.refund,
         },
         {
           question: "Can I withdraw a request I have not confirmed yet?",
@@ -41,13 +39,8 @@ export default async function Page() {
       ]}
       faqTitle="Changes and refund questions"
     >
-      <h2>Who sets the rules</h2>
-      <p>
-        The rules for changing a test date, cancelling or getting a refund are set by the IELTS test
-        provider, not by bookyourielts.com. They can depend on how close the test date is, which is
-        why the earlier you tell us, the more options you usually have.
-      </p>
-      {refund && refund.body.split(/\n{2,}/).map((p) => <p key={p}>{p}</p>)}
+      <h2>When you get a refund</h2>
+      <p>{REFUND_AND_FEES.refund}</p>
 
       <h2>How to ask for a change</h2>
       <ol>

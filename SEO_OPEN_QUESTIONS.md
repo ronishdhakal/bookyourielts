@@ -4,21 +4,13 @@ Nothing below is invented on the site. Where a fact is unknown the page says les
 
 ## Fees and money
 
-1. **Service charge.** What does bookyourielts.com charge, if anything? Today the fee page and FAQ say "our team tells
-   you exactly what is included before you pay". To publish the real answer, add a content block with the key
-   `service-charge` in the admin; it then appears in the "Our service charge" section and the FAQ.
-   `TODO(owner)` in `frontend/src/app/(site)/ielts-fee-nepal/page.tsx`.
-2. **Fee for tests with no open date.** The fee table shows "Ask us" for General Training, UKVI Academic, UKVI General
-   Training, Life Skills and every Writing on Paper row when no such date is open. Give the fees (or add a fee master in
-   the admin) to show them all the time. There is no fee master table today; fees come only from open dates.
-3. **Session 2 (17 Oct 2026, Kathmandu, Academic)** shows NPR 3,55,000; expected NPR 35,500. Left for you to fix in the
-   admin, as agreed.
+1. ~~Service charge~~ Answered: free, possibly with a discount on the original price. Now on the fee page (`lib/policy.ts`).
+2. ~~Fee for tests with no open date~~ Answered: the table keeps showing "Ask us".
+3. ~~Session 2 fee~~ Fixed by the owner.
 
 ## Policies
 
-4. **Refund, transfer and cancellation rules.** The site only says the provider sets them and they depend on how
-   close the test date is. If you have concrete rules (deadlines, fees, what you handle), add them to the
-   "Changes, cancellations and refunds" content block (`cancellation-refund`) and the guide uses them automatically.
+4. ~~Refund rules~~ Answered: refund only if we cannot book the requested date. Now on the fee and cancellation pages (`lib/policy.ts`).
 5. **Official provider pages.** Only ielts.org is linked. Send the exact British Council Nepal and IDP Nepal URLs you
    want linked as official references (fee, registration, policies).
 

@@ -4,9 +4,10 @@ import { InfoPage } from "@/components/info-page";
 import { FORMAT_LABELS, formatNpr } from "@/lib/format";
 import { clampDescription, feeRange, summarize, updatedLabel } from "@/lib/inventory";
 import { JsonLd } from "@/components/json-ld";
+import { REFUND_AND_FEES } from "@/lib/policy";
 import { pageMetadata, webPageLd } from "@/lib/seo";
 import { SEO_YEAR } from "@/lib/seo-config";
-import { fetchContent, fetchFaqs, fetchOpenSessions, fetchTestTypes } from "@/lib/server-api";
+import { fetchFaqs, fetchOpenSessions, fetchTestTypes } from "@/lib/server-api";
 import type { TestFormat } from "@/lib/types";
 
 export const revalidate = 600;
@@ -28,11 +29,10 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function FeePage() {
-  const [data, types, faqs, blocks] = await Promise.all([
+  const [data, types, faqs] = await Promise.all([
     fetchOpenSessions(),
     fetchTestTypes(),
     fetchFaqs("fees"),
-    fetchContent(),
   ]);
   const sessions = data?.results ?? [];
   const inv = summarize(sessions);
@@ -56,13 +56,7 @@ export default async function FeePage() {
     }),
   );
 
-  const refund = blocks.find((b) => b.key === "cancellation-refund");
-  // TODO(owner): the service charge is not in the data. Add a content block with key
-  // "service-charge" in the admin and it appears here and in the FAQ. See SEO_OPEN_QUESTIONS.md.
-  const serviceCharge = blocks.find((b) => b.key === "service-charge");
-  const serviceAnswer = serviceCharge
-    ? serviceCharge.body.replace(/\n+/g, " ")
-    : "Our team tells you exactly what is included, and what you pay, before you pay anything. There is no online payment on this website, so nothing is charged when you book a date here.";
+  const serviceAnswer = REFUND_AND_FEES.service;
 
   const pageFaqs = [
     {
@@ -78,8 +72,7 @@ export default async function FeePage() {
     },
     {
       question: "Is the IELTS fee refundable?",
-      answer:
-        "Rules for changes, cancellations and refunds are set by the test provider and depend on how close the test date is. Message us as early as you can and quote your booking reference.",
+      answer: REFUND_AND_FEES.refund,
     },
     {
       question: "Why do two dates show different fees?",
@@ -182,14 +175,8 @@ export default async function FeePage() {
       <h2>Our service charge</h2>
       <p>{serviceAnswer}</p>
 
-      {refund && (
-        <>
-          <h2>{refund.title}</h2>
-          {refund.body.split(/\n{2,}/).map((p) => (
-            <p key={p}>{p}</p>
-          ))}
-        </>
-      )}
+      <h2>Refunds</h2>
+      <p>{REFUND_AND_FEES.refund}</p>
 
       <h2>Official information</h2>
       <p>
