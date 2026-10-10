@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import { INDEXABLE_MIN_WORDS } from "./seo-config";
+import { INDEXABLE_MIN_WORDS, NOINDEX_THIN_PAGES } from "./seo-config";
 import { pageMetadata } from "./seo";
 
 /** The shared indexability rule: open dates, or enough unique factual copy. */
 export function isIndexable(openCount: number, words: number): boolean {
-  return openCount > 0 || words >= INDEXABLE_MIN_WORDS;
+  return !NOINDEX_THIN_PAGES || openCount > 0 || words >= INDEXABLE_MIN_WORDS;
 }
 
 /** Canonical path for a list page: ?page=N stays self-referencing, filters collapse to the clean URL. */

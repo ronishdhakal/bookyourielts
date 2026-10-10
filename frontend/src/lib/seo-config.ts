@@ -9,6 +9,12 @@
  */
 export const INDEXABLE_MIN_WORDS = 300;
 
+/**
+ * When false (current choice) every landing page stays indexable and in the sitemap, even with no
+ * open dates. Set to true to apply the INDEXABLE_MIN_WORDS rule above and noindex thin pages.
+ */
+export const NOINDEX_THIN_PAGES = false;
+
 /** Cities that stay indexable even with no open dates. */
 export const ALWAYS_INDEXABLE_CITIES = ["kathmandu"];
 

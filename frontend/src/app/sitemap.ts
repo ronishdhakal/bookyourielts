@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { GUIDES } from "@/lib/guides";
 import { PROVIDER_PAGES, TYPE_PAGES, monthSlug, monthsWithSessions } from "@/lib/landing";
-import { ALWAYS_INDEXABLE_CITIES } from "@/lib/seo-config";
+import { ALWAYS_INDEXABLE_CITIES, NOINDEX_THIN_PAGES } from "@/lib/seo-config";
 import { SITE_URL } from "@/lib/seo";
 import { fetchCities, fetchOpenSessions, fetchPosts } from "@/lib/server-api";
 import type { TestSession } from "@/lib/types";
@@ -59,7 +59,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       : []),
     ...posts.map((p) => entry(`/blog/${p.slug}`, new Date(p.updated_at))),
     ...(cities ?? [])
-      .filter((c) => ALWAYS_INDEXABLE_CITIES.includes(c.slug) || c.upcoming_count > 0)
+      .filter(
+        (c) =>
+          !NOINDEX_THIN_PAGES || ALWAYS_INDEXABLE_CITIES.includes(c.slug) || c.upcoming_count > 0,
+      )
       .map((c) =>
         entry(
           `/ielts-test-dates/${c.slug}`,
@@ -72,7 +75,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           (t.filters.test_type ? s.test_type.code === t.filters.test_type : s.test_type.is_ukvi) &&
           (t.match ? t.match(s) : true),
       );
-      return match.length ? [entry(t.path, latest(match) ?? dataDate)] : [];
+      return match.length || !NOINDEX_THIN_PAGES ? [entry(t.path, latest(match) ?? dataDate)] : [];
     }),
     ...monthsWithSessions(sessions).map((m) =>
       entry(
