@@ -1,106 +1,173 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { InfoPage } from "@/components/info-page";
 import { FORMAT_LABELS, formatNpr } from "@/lib/format";
-import { pageMetadata } from "@/lib/seo";
-import { fetchContent, fetchFaqs, fetchSessions } from "@/lib/server-api";
+import { clampDescription, feeRange, summarize, updatedLabel } from "@/lib/inventory";
+import { JsonLd } from "@/components/json-ld";
+import { pageMetadata, webPageLd } from "@/lib/seo";
+import { SEO_YEAR } from "@/lib/seo-config";
+import { fetchContent, fetchFaqs, fetchOpenSessions, fetchTestTypes } from "@/lib/server-api";
 import type { TestFormat } from "@/lib/types";
 
-export const metadata = pageMetadata({
-  title: "IELTS Exam Fee in Nepal: Current Fees by Test Type",
-  description:
-    "What does IELTS cost in Nepal? See current IELTS fees in NPR by test type and format (Academic, General Training, UKVI, Life Skills), plus what affects the price.",
-  path: "/ielts-fee-nepal",
-});
+export const revalidate = 600;
 
-export const revalidate = 300;
+const FORMATS: TestFormat[] = ["computer", "computer_wop"];
+
+export async function generateMetadata(): Promise<Metadata> {
+  const inv = summarize((await fetchOpenSessions())?.results ?? []);
+  const range = feeRange(inv);
+  return pageMetadata({
+    title: `IELTS Fee in Nepal ${SEO_YEAR} (NPR): Price by Test Type`,
+    description: clampDescription(
+      range
+        ? `IELTS price in Nepal ${SEO_YEAR}: fees run ${range} depending on test type and format. See Academic, General Training, UKVI and Life Skills, and why fees differ.`
+        : `IELTS fee in Nepal ${SEO_YEAR}: what affects the price of Academic, General Training, UKVI and Life Skills, how payment works, and how to ask for the current fee.`,
+    ),
+    path: "/ielts-fee-nepal",
+  });
+}
 
 export default async function FeePage() {
-  const [data, faqs, blocks] = await Promise.all([
-    fetchSessions({ hide_closed: "true", page_size: "100" }, 300),
+  const [data, types, faqs, blocks] = await Promise.all([
+    fetchOpenSessions(),
+    fetchTestTypes(),
     fetchFaqs("fees"),
     fetchContent(),
   ]);
+  const sessions = data?.results ?? [];
+  const inv = summarize(sessions);
+  const range = feeRange(inv);
+  const verified = updatedLabel(inv.updatedAt);
 
-  const groups = new Map<
-    string,
-    { type: string; format: TestFormat; min: number; max: number; count: number }
-  >();
-  for (const s of data?.results ?? []) {
-    const key = `${s.test_type.code}|${s.format}`;
-    const g = groups.get(key);
-    if (g) {
-      g.min = Math.min(g.min, s.fee_npr);
-      g.max = Math.max(g.max, s.fee_npr);
-      g.count += 1;
-    } else
-      groups.set(key, {
-        type: s.test_type.name,
-        format: s.format,
-        min: s.fee_npr,
-        max: s.fee_npr,
-        count: 1,
-      });
-  }
-  const rows = [...groups.values()].sort(
-    (a, b) => a.type.localeCompare(b.type) || a.format.localeCompare(b.format),
+  // One row per test type x format. Fees come from the open dates; no date means "Ask us", never a guess.
+  const rows = (types ?? []).flatMap((t) =>
+    FORMATS.map((format) => {
+      const match = sessions.filter((s) => s.test_type.code === t.code && s.format === format);
+      const fees = match.map((s) => s.fee_npr);
+      return {
+        key: `${t.code}|${format}`,
+        type: t.name,
+        format,
+        notOffered: t.is_ukvi && format === "computer_wop",
+        min: fees.length ? Math.min(...fees) : null,
+        max: fees.length ? Math.max(...fees) : null,
+        count: match.length,
+      };
+    }),
   );
+
   const refund = blocks.find((b) => b.key === "cancellation-refund");
+  // TODO(owner): the service charge is not in the data. Add a content block with key
+  // "service-charge" in the admin and it appears here and in the FAQ. See SEO_OPEN_QUESTIONS.md.
+  const serviceCharge = blocks.find((b) => b.key === "service-charge");
+  const serviceAnswer = serviceCharge
+    ? serviceCharge.body.replace(/\n+/g, " ")
+    : "Our team tells you exactly what is included, and what you pay, before you pay anything. There is no online payment on this website, so nothing is charged when you book a date here.";
+
+  const pageFaqs = [
+    {
+      question: `How much does IELTS cost in Nepal in ${SEO_YEAR}?`,
+      answer: range
+        ? `On the dates we list right now, the IELTS cost in Nepal runs ${range}, depending on the test type and format. The fee for each date is shown on the date itself.`
+        : "The IELTS cost in Nepal depends on the test type and format. No dates are open at the moment, so there is no fee to show; send an inquiry and we will tell you the current fee.",
+    },
+    {
+      question: "Is the UKVI fee different?",
+      answer:
+        "UKVI tests (UKVI Academic, UKVI General Training and Life Skills) are priced separately from the standard Academic and General Training tests. The fee is shown on each UKVI date.",
+    },
+    {
+      question: "Is the IELTS fee refundable?",
+      answer:
+        "Rules for changes, cancellations and refunds are set by the test provider and depend on how close the test date is. Message us as early as you can and quote your booking reference.",
+    },
+    {
+      question: "Why do two dates show different fees?",
+      answer:
+        "The fee depends on the test type (for example Academic or UKVI) and the format (computer-delivered or Writing on Paper). The fee set for a date can also change over time. The fee shown on the date you book is the one that applies.",
+    },
+    {
+      question: "Is there a service charge?",
+      answer: serviceAnswer,
+    },
+    ...faqs.filter((f) => !/how much|service charge|refund/i.test(f.question)),
+  ];
 
   return (
     <InfoPage
       path="/ielts-fee-nepal"
       crumb="IELTS fee in Nepal"
       eyebrow="Fees"
-      title="IELTS exam fee in Nepal"
-      lede="The fee depends on the test type and format. Here are the fees on our schedule right now, taken live from the dates we list."
-      faqs={faqs}
+      title={`IELTS fee in Nepal ${SEO_YEAR}: how much does IELTS cost?`}
+      lede="The IELTS price in Nepal depends on the test type and the format. This page shows the current fee for each, taken from the dates we list."
+      faqs={pageFaqs}
       faqTitle="Fee and refund questions"
     >
-      <h2>Current IELTS fees on our schedule</h2>
-      {rows.length > 0 ? (
-        <table>
-          <caption className="sr-only">Current IELTS fees in Nepali rupees</caption>
-          <thead>
-            <tr>
-              <th scope="col">Test</th>
-              <th scope="col">Format</th>
-              <th scope="col">Fee</th>
-              <th scope="col">Open dates</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r.type + r.format}>
-                <td>{r.type}</td>
-                <td>{FORMAT_LABELS[r.format]}</td>
-                <td className="font-mono whitespace-nowrap">
-                  {r.min === r.max ? formatNpr(r.min) : `${formatNpr(r.min)} – ${formatNpr(r.max)}`}
-                </td>
-                <td>{r.count}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      ) : (
-        <p>
-          No dates are open at the moment, so there are no fees to show. Fees appear here as soon as
-          dates are added. <Link href="/inquire">Send an inquiry</Link> and we will message you.
-        </p>
-      )}
       <p>
-        Fees are set by the test provider and can change. The fee shown on the date you book is the
-        one that applies.
+        {range ? (
+          <>
+            The IELTS cost in Nepal is currently <strong>{range}</strong> on the dates we list,
+            depending on the test. The IELTS exam fee for each date is in Nepali rupees (NPR) and is
+            shown before you book. Looking for a date instead? See the{" "}
+            <Link href="/ielts-test-dates">IELTS dates in Nepal</Link>.
+          </>
+        ) : (
+          <>
+            No dates are open at the moment, so there is no current IELTS price to show. Fees appear
+            here as soon as dates are added. <Link href="/inquire">Send an inquiry</Link> and we
+            will message you.
+          </>
+        )}
+      </p>
+
+      <h2>IELTS fee in Nepal by test type</h2>
+      <table>
+        <caption className="sr-only">IELTS fees in Nepali rupees by test type and format</caption>
+        <thead>
+          <tr>
+            <th scope="col">Test</th>
+            <th scope="col">Format</th>
+            <th scope="col">Fee</th>
+            <th scope="col">Open dates</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.key}>
+              <td>{r.type}</td>
+              <td>{FORMAT_LABELS[r.format]}</td>
+              <td className="font-mono whitespace-nowrap">
+                {r.notOffered
+                  ? "Not offered"
+                  : r.min === null || r.max === null
+                    ? "Ask us"
+                    : r.min === r.max
+                      ? formatNpr(r.min)
+                      : `${formatNpr(r.min)} – ${formatNpr(r.max)}`}
+              </td>
+              <td>{r.notOffered ? "–" : r.count}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p>
+        {verified && <>Fees last verified {verified}. </>}
+        &ldquo;Ask us&rdquo; means no date is open for that test right now, so we do not show a fee.{" "}
+        <Link href="/inquire">Ask us for the current fee</Link>. Fees are set by the test provider
+        and can change.
       </p>
 
       <h2>Why fees differ</h2>
       <ul>
         <li>
           <strong>UKVI tests</strong> (UKVI Academic, UKVI General Training and Life Skills) are
-          priced separately from the standard Academic and General Training tests.
+          priced separately from the standard Academic and General Training tests, and are not
+          available with Writing on Paper.
         </li>
         <li>
           <strong>Writing on Paper</strong> is a different format from the standard
-          computer-delivered test and may be priced differently.
+          computer-delivered test and may be priced differently. See{" "}
+          <Link href="/ielts-on-computer-nepal">IELTS on computer in Nepal</Link>.
         </li>
         <li>Academic and General Training are normally priced the same within the same format.</li>
       </ul>
@@ -112,6 +179,9 @@ export default async function FeePage() {
         anything.
       </p>
 
+      <h2>Our service charge</h2>
+      <p>{serviceAnswer}</p>
+
       {refund && (
         <>
           <h2>{refund.title}</h2>
@@ -121,9 +191,27 @@ export default async function FeePage() {
         </>
       )}
 
+      <h2>Official information</h2>
       <p>
-        Ready to see dates? Browse <Link href="/ielts-test-dates">all IELTS test dates</Link>.
+        IELTS is jointly owned by the British Council, IDP IELTS and Cambridge University Press
+        &amp; Assessment. For the official description of the test, visit{" "}
+        <a href="https://ielts.org" rel="noopener noreferrer" target="_blank">
+          ielts.org
+        </a>
+        . bookyourielts.com is an independent service and is not affiliated with them.
       </p>
+
+      <p>
+        Ready to book? Browse <Link href="/ielts-test-dates">all IELTS test dates</Link> or read{" "}
+        <Link href="/ielts-booking-nepal">how to book IELTS in Nepal</Link>.
+      </p>
+      <JsonLd
+        data={webPageLd({
+          path: "/ielts-fee-nepal",
+          name: "IELTS fee in Nepal",
+          dateModified: inv.updatedAt,
+        })}
+      />
     </InfoPage>
   );
 }

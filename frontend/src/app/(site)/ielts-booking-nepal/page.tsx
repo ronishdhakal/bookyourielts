@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { InfoPage } from "@/components/info-page";
 import { pageMetadata } from "@/lib/seo";
+import { SEO_YEAR } from "@/lib/seo-config";
 import { fetchCities, fetchFaqs } from "@/lib/server-api";
 
 export const metadata = pageMetadata({
-  title: "IELTS Booking in Nepal: How to Book Your Test Date",
+  title: `How to Book IELTS in Nepal ${SEO_YEAR}: Step-by-Step Guide`,
   description:
-    "A plain-English guide to IELTS booking in Nepal: test formats, cities, fees, registration deadlines, the Speaking test and how to book your date.",
+    "A plain-English guide to how to book IELTS in Nepal: choose a test type, format, city and date, register with your passport details, and what happens after you book.",
   path: "/ielts-booking-nepal",
 });
 
@@ -21,9 +22,9 @@ export default async function IeltsBookingNepalPage() {
   return (
     <InfoPage
       path="/ielts-booking-nepal"
-      crumb="IELTS booking in Nepal"
+      crumb="How to book IELTS"
       eyebrow="Guide"
-      title="IELTS booking in Nepal: everything you need before you pick a date"
+      title="How to book IELTS in Nepal, step by step"
       lede="IELTS dates in Nepal fill quickly and are released in batches. This guide explains how booking works, what to choose, and how to get a seat without the guesswork."
       faqs={faqs}
       faqTitle="IELTS booking questions"
