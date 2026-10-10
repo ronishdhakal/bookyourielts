@@ -67,6 +67,7 @@ class SessionSerializer(serializers.ModelSerializer):
             "registration_closes_on",
             "results_date",
             "speaking_note",
+            "updated_at",
         ]
 
     def get_weekday(self, obj) -> str:

@@ -118,3 +118,9 @@ def test_api_works_without_trailing_slash(api, make_session):
     make_session()
     res = api.get("/api/v1/sessions")
     assert res.status_code == 200 and res.data["count"] == 1
+
+
+def test_session_exposes_updated_at(api, make_session):
+    make_session()
+    res = api.get(URL)
+    assert res.data["results"][0]["updated_at"]

@@ -43,6 +43,7 @@ export interface TestSession {
   registration_closes_on: string;
   results_date: string;
   speaking_note: string;
+  updated_at: string;
 }
 
 export interface Page<T> {
