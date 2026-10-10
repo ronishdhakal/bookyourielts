@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { eventsLd } from "@/lib/seo";
+import { SITE_URL, eventsLd } from "@/lib/seo";
 import type { Page, SessionFilters, TestSession } from "@/lib/types";
 import { JsonLd } from "./json-ld";
 import { SessionList } from "./session-list";
@@ -51,11 +51,14 @@ export function ScheduleResults({
   filters,
   basePath,
   caption,
+  lockedKeys = [],
 }: {
   data: Page<TestSession> | null;
   filters: SessionFilters;
   basePath: string;
   caption: string;
+  /** Filter keys already implied by basePath (e.g. "city" on a city page); left out of page links. */
+  lockedKeys?: (keyof SessionFilters)[];
 }) {
   const hasFilters = Object.entries(filters).some(([k, v]) => k !== "page" && v);
 
@@ -80,7 +83,8 @@ export function ScheduleResults({
   const pages = Math.ceil(data.count / pageSize);
   const href = (p: number) => {
     const sp = new URLSearchParams();
-    for (const [k, v] of Object.entries(filters)) if (v && k !== "page") sp.set(k, v);
+    for (const [k, v] of Object.entries(filters))
+      if (v && k !== "page" && !lockedKeys.includes(k as keyof SessionFilters)) sp.set(k, v);
     if (p > 1) sp.set("page", String(p));
     const qs = sp.toString();
     return qs ? `${basePath}?${qs}` : basePath;
@@ -109,7 +113,7 @@ export function ScheduleResults({
           )}
         </nav>
       )}
-      <JsonLd data={eventsLd(data.results.slice(0, 10))} />
+      <JsonLd data={eventsLd(data.results.slice(0, 10), `${SITE_URL}${basePath}`)} />
     </div>
   );
 }
